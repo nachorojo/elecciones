@@ -7,7 +7,8 @@
 ## Datos
 
 ### Ubicación (FUERA del repo)
-- Carpeta: `C:\Users\iir44590\OneDrive - Atresmedia Corporacion De Medios De Comunicacion SA\1. MIS DOCUMENTOS\_____IA_____\Claude\Proyectos Claude\Discover\Elecciones\datos\`
+- Carpeta: `C:\Users\iir44590\OneDrive - Atresmedia Corporacion De Medios De Comunicacion SA\1. MIS DOCUMENTOS\_____IA_____\Claude\Proyectos Claude\Elecciones 2026\datos\` (desde la repo: `..\datos\`)
+- La repo vive en `...\Elecciones 2026\repo\`. Entorno Python fuera de OneDrive: `%LOCALAPPDATA%\venvs\elecciones` (duckdb, pandas, pyarrow, pytest).
 - `db_mesas.csv`: original, 1 GB. NO MODIFICAR.
 - `db_mesas_limpio.csv`: original con 73 líneas desenvueltas (ver más abajo).
 - `db_mesas.parquet`: generado desde el limpio, todo como VARCHAR, zstd. 573.617 filas, 198 columnas. **Usar este como punto de partida.**
@@ -38,9 +39,27 @@
 12. `datos_oficiales` = N en 1996–2004 y S desde 2008. **Significado pendiente de confirmar.**
 13. `poblacion_provincia` ≠ `prov_poblacion` (fuentes o años distintos). Elegir una.
 
+14. **Secciones con sufijo de letra** (verificado 2026-10-22): en Zaragoza (50297) 1996–2004 hay 53 filas con `seccion_id` de 11 caracteres (`5029702011C`, formato antiguo del INE). Desaparecen desde 2008. `seccion_id` no siempre mide 10 dígitos. Marca: `flag_seccion_con_sufijo`.
+15. **El descuadre de bloques no es solo de 2015**: en 1996 (16 mesas) y 2000 (8) los bloques suman *menos* que `votos_candidaturas`. Marca: `flag_bloques_no_cuadran`.
+16. **`votos_contabilizados` = suma de bloques**, no votos válidos. Los `pct_*` de partidos/bloques del bruto usan ese denominador (inflado en 2015). El limpio usa `votos_candidaturas`.
+17. **`desfase_*` no tiene signo** (solo |años|). Corrección al punto 6: en 2023 hay desfases de 1–2 años (población provincial, % mujeres, PIB) y **no se puede verificar** que sea "hacia atrás". `flag_socio_futuro` solo se activa en 1996–2004; `socio_desfase_max` da los años para todas.
+18. **18 mesas con `votantes` > `censo_escrutinio`** (corrige "votantes ≤ censo"). Marca: `flag_votantes_gt_censo`.
+
 ### Lo que sí está bien
-- Aritmética electoral en todas las elecciones: candidaturas + blancos = válidos; válidos + nulos = votantes; votantes ≤ censo.
-- `participacion` y `pct_*` coinciden con los recuentos. Aun así, recalcular siempre desde los votos.
+- Aritmética electoral en todas las elecciones: candidaturas + blancos = válidos; válidos + nulos = votantes. (Votantes ≤ censo: salvo las 18 mesas del punto 18.)
+- `participacion`, `pct_blancos` y `pct_nulos` coinciden con los recuentos. Aun así, recalcular siempre desde los votos.
+- Los nombres con tilde están bien en el Parquet y en el CSV (UTF-8). Si en la consola de Windows salen como `�`, es la consola, no los datos.
+
+## Pipeline (paso 1, hecho)
+```
+python -m pipeline.run      # ~6 s; lee ..\datos\db_mesas.parquet (o ELECCIONES_RAW) y escribe data/clean/
+python -m pytest            # 41 tests; se saltan si no hay Parquet bruto
+```
+- `data/clean/mesas.parquet`: 573.617 filas, tipado (ids en texto), sin `meta_*` ni `split_sugerido`, `pct_*`/`participacion` recalculados, más `flag_*`, `territorio_comparable_prev` y `socio_desfase_max`. **No borra ninguna mesa**: quien consuma decide qué filtrar.
+- `municipio` pasa a `municipio_nombre_original`; el nombre visible sale de `dim_municipios` (provisional, a sustituir por el nomenclátor del INE).
+- `dim_partidos`: `familia` solo está fijada para PP, PSOE, Vox y Podemos/Sumar; el resto es `por_confirmar` hasta validar con la redacción.
+- Sin recalcular (vienen del bruto): `pct_izquierda_total`, `pct_derecha_total`, `pct_nacionalista`, `indice_izq_der`, `ret*`, `tend*`, `*_z`.
+- Entorno: `pip install -r requirements.txt`. El venv de la sesión de Claude está fuera de OneDrive (`%LOCALAPPDATA%\venvs\elecciones`); no crear `.venv` dentro de la carpeta sincronizada.
 
 ## Reglas para el modelo
 - **Eliminar `meta_*`**: es información del resultado de la propia elección.
@@ -54,7 +73,7 @@
 - Cualquier estimación de voto se publica después de las 20:00 del día de la elección (veda de la LOREG).
 
 ## Plan
-1. `pipeline/`: Parquet limpio en `data/clean/`, con tipos correctos, porcentajes recalculados, tabla canónica de municipios y tabla de partidos/familias. Incluir tests que reproduzcan cada problema de la lista anterior.
+1. (HECHO 2026-10-22, pendiente de commit) `pipeline/`: Parquet limpio en `data/clean/`, con tipos correctos, porcentajes recalculados, tabla canónica de municipios y tabla de partidos/familias. Incluir tests que reproduzcan cada problema de la lista anterior.
 2. Web v1 a nivel de municipio, con las diez elecciones.
 3. Secciones: cruce territorial y mapa con cartografía por año (PMTiles). Renta ADRH desde 2015.
 4. Modelo: base por municipio y después por sección; proyección para la noche electoral.
