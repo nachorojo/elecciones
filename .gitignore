@@ -1,0 +1,15 @@
+# Datos pesados: nunca al repo (GitHub rechaza ficheros > 100 MB)
+data/raw/
+data/clean/
+
+# Formatos de datos brutos en cualquier sitio
+*.csv
+*.parquet
+!data/web/**/*.csv
+
+# Python / entornos
+__pycache__/
+*.pyc
+.venv/
+.env
+.DS_Store
