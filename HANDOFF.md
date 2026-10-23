@@ -74,7 +74,7 @@ pipeline/
   export_mapa.py             descarga y simplifica cartografía INE → municipios.geojson y sec/g/AAAA/NN.geojson
 web/                         sitio estático: index.html, estilo.css, app.js (provincias), municipios.js, secciones.js, data/
 data/web/                    clasificación de candidaturas de Mikel (usada para colorear partidos)
-tests/                       68+ tests (se saltan solos si faltan los datos)
+tests/                       75 tests (se saltan solos si faltan los datos)
 ```
 
 ## 6. Estado de la web (`web/`)
@@ -127,10 +127,9 @@ fronteras compartidas. Cada regeneración de geometrías añade ~36 MB por año 
 - 2015: el CERA tiene ~600 candidaturas con códigos `9xxxxx` que no están en el fichero de candidaturas: sin siglas.
 
 ## 9. Pendiente (orden recomendado)
-1. **Cerrar el nivel de sección:** comprobar que existe `web/data/sec/g/2019/` en la repo. Si no está (la vista de 2019 avisa de que faltan
-   los límites), generarlo desde cualquier PC con internet (~30 min de descarga, sin necesidad de datos locales):
-   `python -c "from pathlib import Path; from pipeline import export_mapa as M; d=Path('sec2019'); M.descargar_secciones(2019, d); print(M.construir_secciones(d, 2019))"`.
-   Después probar en Netlify.
+1. **Nivel de sección: HECHO** para abril 2019, noviembre 2019 y 2023 (límites INE de 2019 y 2023 en `web/data/sec/g/`). Pendiente
+   solo probarlo en Netlify y, si se quiere, añadir años (las capas `Secciones_AAAA` del INE existen de 2007 a 2025; 1996–2004 no).
+   Para otro año: `M.descargar_secciones(AAAA, carpeta)` y `M.construir_secciones(carpeta, AAAA)` (~30 min de descarga, sin datos locales).
 2. **Simulador de escenarios estático** con escaños: exportar `rel` por municipio desde el modelo de Mikel
    (`datos\TFM\tfm_web\motor\escenarios.py`), reescalar al resultado nacional elegido, agregar por provincia, d'Hondt en JS.
    Hay que estimar el CERA por provincia (mantener proporción de la última elección) y tratar Usansolo.

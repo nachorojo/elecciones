@@ -41,7 +41,7 @@ comparables si el municipio cambia de distritos; (5) Usansolo es un municipio nu
 ## Commits de la sesión (rama `claude/blissful-dirac-j8h7p9`)
 `b9c35ea` pipeline y tests · `9ee8147` auditoría Interior · `0e98634` CERA · `b13ed54` motor de escaños ·
 `d11bdf8` web v0 · `1685d68` datos como script · `1d5590c` municipios · `ac79ff2` sin selector de participación ·
-y el commit final de esta sesión (secciones y traspaso; véase `git log`).
+`7b996e8` secciones 2023 y traspaso · y el commit final con el mapa de 2019 (véase `git log`).
 
 ## Cifras de referencia (2023, oficiales)
 PP 8.160.837 (33,06 %, 137 escaños) · PSOE 7.821.718 (31,68 %, 121) · Vox 3.057.000 (12,38 %, 33) · Sumar 3.044.996 (12,33 %, 31).
