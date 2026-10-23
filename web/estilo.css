@@ -109,3 +109,4 @@ button.secundario {
 .rejilla.vista-mun { grid-template-columns: minmax(360px, 1.6fr) 1fr; }
 .rejilla.vista-mun .mapa-mun { height: 580px; }
 @media (max-width: 800px) { .rejilla.vista-mun { grid-template-columns: 1fr; } }
+[hidden] { display: none !important; }
