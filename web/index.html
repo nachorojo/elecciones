@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Atlas Electoral · Elecciones generales 1996–2023</title>
+<meta name="description" content="Resultados oficiales de las elecciones generales en España, por provincia y escaños, 1996–2023.">
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<header class="cabecera">
+  <div class="marca">
+    <div class="logo" aria-hidden="true"></div>
+    <div>
+      <h1>Atlas Electoral</h1>
+      <p>Elecciones generales en España, 1996&ndash;2023 &middot; resultados oficiales</p>
+    </div>
+  </div>
+  <span class="insignia">Versión de trabajo &middot; sin predicción todavía</span>
+</header>
+
+<main>
+  <div class="controles">
+    <label>Convocatoria
+      <select id="eleccion"></select>
+    </label>
+    <label>Colorear por
+      <select id="metrica">
+        <option value="ganador">Candidatura más votada</option>
+        <option value="participacion">Participación</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="rejilla">
+    <section class="tarjeta">
+      <h2>Mapa de provincias</h2>
+      <p class="nota">Cada casilla es una provincia (mosaico, no mapa geográfico). Pulsa una para ver su resultado.</p>
+      <div id="mapa" class="mapa" role="group" aria-label="Provincias"></div>
+      <div id="leyenda" class="leyenda"></div>
+    </section>
+
+    <section class="tarjeta">
+      <div class="cab-detalle">
+        <h2 id="titulo">España</h2>
+        <button id="volver" class="secundario" hidden>Ver España</button>
+      </div>
+      <p id="fecha" class="nota"></p>
+      <div id="resumen" class="resumen"></div>
+      <div id="partidos"></div>
+      <p id="otros" class="nota"></p>
+      <h3>Candidatura más votada en cada elección</h3>
+      <div id="historia" class="historia"></div>
+    </section>
+  </div>
+
+  <section class="aviso">
+    <strong>Cómo leer estas cifras.</strong>
+    Datos oficiales del Ministerio del Interior (voto CERA incluido). Los porcentajes son sobre
+    <em>votos válidos</em> (candidaturas más votos en blanco). La participación es la de los electores
+    residentes en España; el voto exterior (CERA) se muestra aparte. La unidad territorial más fina
+    que existe en los datos de voto es la sección censal, no la calle.
+  </section>
+</main>
+
+<footer class="pie">
+  Base de datos y metodología de partida: <strong>Mikel Ib&aacute;&ntilde;ez Gonz&aacute;lez</strong>
+  (TFM, Universidad Aut&oacute;noma de Madrid). Desarrollo: Nacho Rojo con Claude.
+  Fuente de los datos: Ministerio del Interior &middot; Infoelectoral.
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

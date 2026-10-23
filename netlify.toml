@@ -1,0 +1,13 @@
+# Web estática: no hay paso de build. Los datos (web/data/resultados.json) se generan en local con
+#   python -m pipeline.export_web
+# y se suben a la repo, igual que Marcador, Cuadrante y KPIs.
+[build]
+  publish = "web"
+
+# Versión de trabajo: que no la indexen los buscadores.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
