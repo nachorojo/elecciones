@@ -90,7 +90,11 @@ def build(base: Path = DEFAULT, salida: Path = SALIDA) -> Path:
         ambito = _ambito(base, per, el, fam, siglas)
         elecciones.append({"id": el, "fecha": FECHAS[el], "nacional": ambito.pop("nacional"), "provincias": ambito})
     salida.parent.mkdir(parents=True, exist_ok=True)
-    salida.write_text(json.dumps({"elecciones": elecciones}, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    txt = json.dumps({"elecciones": elecciones}, ensure_ascii=False, separators=(",", ":"))
+    salida.write_text(txt, encoding="utf-8")
+    # Mismo contenido como script: la web funciona también abriendo index.html desde el disco
+    # (el navegador bloquea fetch() sobre file://).
+    salida.with_suffix(".js").write_text("window.RESULTADOS=" + txt + ";", encoding="utf-8")
     return salida
 
 

@@ -137,7 +137,7 @@ function pintarDetalle() {
 function pintar() { pintarMapa(); pintarDetalle(); }
 
 async function inicio() {
-  DATOS = await (await fetch("data/resultados.json")).json();
+  DATOS = window.RESULTADOS || await (await fetch("data/resultados.json")).json();
   const sel = $("#eleccion");
   DATOS.elecciones.forEach((e) => sel.appendChild(Object.assign(el("option"), { value: e.id, textContent: e.fecha })));
   sel.value = "2023";
@@ -146,4 +146,4 @@ async function inicio() {
   $("#volver").addEventListener("click", () => { seleccion = null; pintar(); });
   pintar();
 }
-inicio().catch((err) => { document.querySelector("main").prepend(el("p", "aviso", "No se pudieron cargar los datos: " + err.message)); });
+inicio().catch((err) => { document.querySelector("main").prepend(el("p", "aviso", "No se pudieron cargar los datos (" + err.message + "). Comprueba que existe web/data/resultados.js.")); });
