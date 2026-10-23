@@ -4,7 +4,7 @@ import time
 
 import duckdb
 
-from . import clean, config as C, dims
+from . import cera, clean, config as C, dims
 
 
 def main() -> int:
@@ -18,6 +18,11 @@ def main() -> int:
     print(f"mesas.parquet  ({time.time() - t:.0f}s)  {mesas}")
     for name, path in dims.build(mesas, C.CLEAN_DIR, con).items():
         print(f"{name}.parquet  {path}")
+    if cera.DEFAULT.exists():
+        for path in cera.build(cera.DEFAULT, C.CLEAN_DIR, con):
+            print(f"{path.name}  {path}")
+    else:
+        print(f"Sin ficheros de Interior en {cera.DEFAULT}: se omite el CERA", file=sys.stderr)
     return 0
 
 

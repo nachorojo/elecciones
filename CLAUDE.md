@@ -53,7 +53,7 @@
 ## Pipeline (paso 1, hecho)
 ```
 python -m pipeline.run      # ~6 s; lee ..\datos\db_mesas.parquet (o ELECCIONES_RAW) y escribe data/clean/
-python -m pytest            # 42 tests; se saltan si no hay Parquet bruto (ni ficheros de Interior)
+python -m pytest            # 48 tests; se saltan si no hay Parquet bruto (ni ficheros de Interior)
 ```
 - `data/clean/mesas.parquet`: 573.617 filas, tipado (ids en texto), sin `meta_*` ni `split_sugerido`, `pct_*`/`participacion` recalculados, más `flag_*`, `territorio_comparable_prev` y `socio_desfase_max`. **No borra ninguna mesa**: quien consuma decide qué filtrar.
 - `municipio` pasa a `municipio_nombre_original`; el nombre visible sale de `dim_municipios` (provisional, a sustituir por el nomenclátor del INE).
@@ -101,6 +101,7 @@ python -m pytest            # 42 tests; se saltan si no hay Parquet bruto (ni fi
 | 526.065 / 177.920 | 930.926 / 210.631 | 1.113.754 / 301.182 | 1.205.329 / 377.377 | 1.482.786 / 72.555 | 1.880.064 / 87.978 | 1.924.021 / 119.815 | 2.099.463 / 116.203 | 2.130.754 / 143.986 | 2.328.260 / 203.254 |
 
   El voto CERA se hunde en 2011 pese a que el censo crece; coincide con la reforma de 2011 que obligó a solicitar el voto (el "voto rogado"; dato de contexto, sin verificar aquí). En 2023 son el 0,8 % de los votos a candidaturas. Hay que añadirlo para repartir escaños (puede decidir el último escaño en provincias con mucho voto exterior).
+- **CERA ya en el pipeline** (`pipeline/cera.py`, parte de `pipeline.run`): `data/clean/cera_provincia.parquet` (52 provincias × 10 elecciones: censo, blancos, nulos, votos a candidaturas) y `data/clean/cera_candidaturas.parquet` (votos por candidatura con siglas y candidatura cabecera nacional). Suma de candidaturas = total provincial en todas las elecciones salvo 2015 (1 voto de diferencia, del propio Interior). **Limitación 2015**: unas 600 candidaturas del CERA llevan códigos `9xxxxx` que no están en el fichero 03, así que sus votos (≈88.000, casi todo el CERA de 2015) quedan sin siglas. No mapeadas todavía a las columnas de partido de `mesas.parquet`.
 - Avances de participación: 1.º a las 14:00 y 2.º a las 18:00 (fichero 02); cierre a las 20:00.
 - Fuera de la base: Europeas 2024, autonómicas y municipales posteriores a 2023 (los únicos votos reales desde 23J). Pendiente de decidir si se incorporan.
 
@@ -118,4 +119,5 @@ python -m pytest            # 42 tests; se saltan si no hay Parquet bruto (ni fi
 ## Pendiente de decidir
 - Dónde se publica: CMS de Onda Cero (embebido) o web independiente (dominio y propiedad de la URL).
 - Qué población provincial usar (`poblacion_provincia` vs `prov_poblacion`).
-- Incorporar CERA y elecciones posteriores a 2023.
+- Mapear las candidaturas (incluidas las del CERA) a las columnas de partido/familia; resolver el CERA 2015.
+- Incorporar elecciones posteriores a 2023 (Europeas 2024, autonómicas).
