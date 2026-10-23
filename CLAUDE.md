@@ -53,7 +53,7 @@
 ## Pipeline (paso 1, hecho)
 ```
 python -m pipeline.run      # ~6 s; lee ..\datos\db_mesas.parquet (o ELECCIONES_RAW) y escribe data/clean/
-python -m pytest            # 48 tests; se saltan si no hay Parquet bruto (ni ficheros de Interior)
+python -m pytest            # 57 tests; se saltan si no hay Parquet bruto (ni ficheros de Interior)
 ```
 - `data/clean/mesas.parquet`: 573.617 filas, tipado (ids en texto), sin `meta_*` ni `split_sugerido`, `pct_*`/`participacion` recalculados, más `flag_*`, `territorio_comparable_prev` y `socio_desfase_max`. **No borra ninguna mesa**: quien consuma decide qué filtrar.
 - `municipio` pasa a `municipio_nombre_original`; el nombre visible sale de `dim_municipios` (provisional, a sustituir por el nomenclátor del INE).
@@ -104,6 +104,16 @@ python -m pytest            # 48 tests; se saltan si no hay Parquet bruto (ni fi
 - **CERA ya en el pipeline** (`pipeline/cera.py`, parte de `pipeline.run`): `data/clean/cera_provincia.parquet` (52 provincias × 10 elecciones: censo, blancos, nulos, votos a candidaturas) y `data/clean/cera_candidaturas.parquet` (votos por candidatura con siglas y candidatura cabecera nacional). Suma de candidaturas = total provincial en todas las elecciones salvo 2015 (1 voto de diferencia, del propio Interior). **Limitación 2015**: unas 600 candidaturas del CERA llevan códigos `9xxxxx` que no están en el fichero 03, así que sus votos (≈88.000, casi todo el CERA de 2015) quedan sin siglas. No mapeadas todavía a las columnas de partido de `mesas.parquet`.
 - Avances de participación: 1.º a las 14:00 y 2.º a las 18:00 (fichero 02); cierre a las 20:00.
 - Fuera de la base: Europeas 2024, autonómicas y municipales posteriores a 2023 (los únicos votos reales desde 23J). Pendiente de decidir si se incorporan.
+
+## Definición del proyecto (acordada con Nacho, 2026-10-23)
+- **Créditos:** la base de datos y el trabajo previo son de Mikel (Miguel Ibáñez González, TFM UAM, tutor David Domínguez), hijo de Nacho. Tendrá todos los créditos en lo que se publique; Claude también figura como colaborador.
+- **Producto:** web para ondacero.es con (1) consulta histórica con buscador, (2) mapa, (3) chatbot, (4) predictor/simulador. Hay que partir de `datos\TFM\tfm_web\` (Flask + Ollama local) y mejorar/completar; **pendiente leer su código** (solo se ha leído su documentación).
+- **Arquitectura objetivo:** web estática con datos y resultados del modelo precalculados (como Marcador/Cuadrante: Netlify, sin IA en producción). El LLM del chatbot es opcional; el diseño del TFM ya funciona sin él (reglas + plantillas).
+- **Predictor:** escenario base de continuidad con intervalo ancho (calibrado por backtest, nunca presentado como pronóstico) + escenario del usuario ("el PSOE sube 3 escaños, ¿qué pasa?"). Disclaimer con el error medido del backtest. Las encuestas son una entrada más del escenario, separada del "puro dato". Backtest del TFM: 82,1 % de municipios acertados en 2023 *dado el resultado nacional real*, frente a ~68,5 % repitiendo el ganador de 2019b.
+- **Motor de escaños HECHO** (`pipeline/escanos.py`, `python -m pipeline.escanos`): d'Hondt por circunscripción con barrera del 3 % de votos válidos (candidaturas + blancos, inclusiva). **Validado: reproduce los 520 repartos oficiales (52 circunscripciones × 10 elecciones) sin ninguna diferencia y sin sorteos**, usando los votos del fichero 08 de Interior (que ya incluyen el CERA). Comprobaciones: los escaños oficiales suman 350 en todas; Sainte-Laguë daría un reparto distinto en 185 de 520 (el test discrimina el método); la barrera es el 3 % y no el 5 % (Barcelona 1996/2000/2019a y Madrid 2008 lo demuestran). Límites: solo 4 casos ejercitan la barrera; el sorteo de empates no se puede reproducir (se devuelve `empate=True`); en 2000 (2 provincias) y 2008 (1) la suma de candidaturas difiere del total provincial del propio fichero 07. **Aún no probado**: repartir con votos *estimados* (lo que hará el simulador); eso exige estimar votos por provincia, incluido el CERA, y las listas del 29N (28 de octubre).
+- **Noche electoral (a partir de las 20:00):** actualización continua desde el inicio del escrutinio. Pendiente saber de dónde llega el flujo en vivo y si hay registros con hora del 23J 2023 (sin orden histórico de llegada de mesas no se puede validar el sesgo de las primeras mesas).
+- **Legal (a confirmar con Jurídico):** veda de sondeos en los últimos días previos (cinco, según recuerdo); y que un simulador alimentado con encuestas no quede afectado.
+- **Cartografía:** no hay ninguna en la carpeta del TFM (solo un mosaico de provincias). Hay que descargar límites municipales y de sección por año.
 
 ## Calendario del 29N
 - **28 de octubre de 2026**: se publican las listas al Congreso en cada una de las 52 circunscripciones y el número de diputados que elige cada una (dato del usuario, 2026-10-23). Recogerlo cuando salga: es la base del reparto de escaños.
