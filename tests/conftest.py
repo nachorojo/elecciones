@@ -9,10 +9,15 @@ from pipeline import clean, config as C, dims
 
 
 @pytest.fixture(scope="session")
-def con(tmp_path_factory):
+def clean_dir(tmp_path_factory):
     if not C.RAW.exists():
         pytest.skip(f"No hay Parquet bruto en {C.RAW}")
-    out = tmp_path_factory.mktemp("clean")
+    return tmp_path_factory.mktemp("clean")
+
+
+@pytest.fixture(scope="session")
+def con(clean_dir):
+    out = clean_dir
     c = duckdb.connect()
     mesas = clean.build(C.RAW, out, c)
     dims.build(mesas, out, c)
