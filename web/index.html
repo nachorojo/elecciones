@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Atlas Electoral · Elecciones generales 1996–2023</title>
-<meta name="description" content="Resultados oficiales de las elecciones generales en España, por provincia y escaños, 1996–2023.">
+<meta name="description" content="Resultados oficiales de las elecciones generales en España por provincia y municipio, 1996–2023.">
 <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
@@ -31,13 +31,34 @@
         <option value="participacion">Participación</option>
       </select>
     </label>
+    <div class="vistas" role="group" aria-label="Nivel territorial">
+      <button id="vista-prov" class="vista activa" type="button">Provincias</button>
+      <button id="vista-mun" class="vista" type="button">Municipios</button>
+    </div>
   </div>
 
   <div class="rejilla">
     <section class="tarjeta">
-      <h2>Mapa de provincias</h2>
-      <p class="nota">Cada casilla es una provincia (mosaico, no mapa geográfico). Pulsa una para ver su resultado.</p>
-      <div id="mapa" class="mapa" role="group" aria-label="Provincias"></div>
+      <div id="bloque-prov">
+        <h2>Mapa de provincias</h2>
+        <p class="nota">Cada casilla es una provincia (mosaico, no mapa geográfico). Pulsa una para ver su resultado.</p>
+        <div id="mapa" class="mapa" role="group" aria-label="Provincias"></div>
+      </div>
+      <div id="bloque-mun" hidden>
+        <h2>Mapa de municipios</h2>
+        <div class="busqueda">
+          <label class="buscador">Buscar municipio
+            <input id="buscar" type="search" autocomplete="off" spellcheck="false" placeholder="Alcalá de Henares, Marinaleda…">
+            <div id="sugerencias" class="sugerencias" hidden></div>
+          </label>
+          <label>Ir a provincia
+            <select id="ir-provincia"><option value="">—</option></select>
+          </label>
+        </div>
+        <div id="estado-mun" class="nota">Cargando el mapa municipal…</div>
+        <div id="mapa-mun" class="mapa-mun" aria-label="Mapa de municipios"></div>
+        <p id="hover" class="nota hover">Pasa el ratón o pulsa un municipio.</p>
+      </div>
       <div id="leyenda" class="leyenda"></div>
     </section>
 
@@ -57,20 +78,22 @@
 
   <section class="aviso">
     <strong>Cómo leer estas cifras.</strong>
-    Datos oficiales del Ministerio del Interior (voto CERA incluido). Los porcentajes son sobre
+    Datos oficiales del Ministerio del Interior. Los porcentajes son sobre
     <em>votos válidos</em> (candidaturas más votos en blanco). La participación es la de los electores
-    residentes en España; el voto exterior (CERA) se muestra aparte. La unidad territorial más fina
-    que existe en los datos de voto es la sección censal, no la calle.
+    residentes en España; el voto exterior (CERA) solo aparece en España y provincias, no en los municipios.
+    Los municipios que se han fusionado o creado desde 1996 solo tienen datos en las elecciones en que existían.
+    La unidad territorial más fina que existe en los datos de voto es la sección censal, no la calle.
   </section>
 </main>
 
 <footer class="pie">
   Base de datos y metodología de partida: <strong>Mikel Ib&aacute;&ntilde;ez Gonz&aacute;lez</strong>
-  (TFM, Universidad Aut&oacute;noma de Madrid). Desarrollo: Nacho Rojo con Claude.
-  Fuente de los datos: Ministerio del Interior &middot; Infoelectoral.
+  (TFM, Universidad Aut&oacute;noma de Madrid). Desarrollo: Nacho Rojo con Claude.<br>
+  Resultados: Ministerio del Interior &middot; Infoelectoral. Cartograf&iacute;a: Instituto Nacional de Estad&iacute;stica (CC BY 4.0).
 </footer>
 
 <script src="data/resultados.js"></script>
+<script src="municipios.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

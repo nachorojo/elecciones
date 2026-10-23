@@ -62,12 +62,15 @@ function pintarMapa() {
     b.style.gridRow = y + 1;
     const g = ganador(prov);
     if (metrica === "ganador") {
-      b.style.background = color(g.f);
+      // Color del partido; cuanto más pálido, más ajustada la ventaja de su cuota de voto.
+      const t = Math.min(1, Math.max(0, (100 * g.v / prov.validos - 25) / 30));
+      b.style.background = `color-mix(in srgb, ${color(g.f)} ${Math.round(40 + 60 * t)}%, var(--superficie-alta))`;
     } else {
       const t = (prov.participacion_residentes - min) / (max - min || 1);
-      b.style.background = `hsl(215 70% ${88 - 52 * t}%)`;
-      b.style.color = t > 0.45 ? "#fff" : "#12171f";
+      b.style.background = `hsl(215 75% ${90 - 58 * t}%)`;
+      b.style.color = t > 0.5 ? "#fff" : "#12171f";
       b.style.textShadow = "none";
+      b.textContent = String(Math.round(prov.participacion_residentes));
     }
     b.title = `${prov.nombre}: ${g.s} (${dec(100 * g.v / prov.validos, 1)} %) · participación ${dec(prov.participacion_residentes, 1)} %`;
     b.setAttribute("aria-label", b.title);
@@ -78,6 +81,7 @@ function pintarMapa() {
   ley.replaceChildren();
   if (metrica === "ganador") {
     const usados = [...new Set(Object.values(e.provincias).map((p) => ganador(p).f))];
+    ley.appendChild(el("span", null, "Color = candidatura más votada; más pálido = ventaja más ajustada."));
     usados.forEach((f) => {
       const s = el("span");
       const i = el("i"); i.style.background = color(f);
@@ -85,7 +89,8 @@ function pintarMapa() {
       ley.appendChild(s);
     });
   } else {
-    ley.textContent = `Participación de residentes: de ${dec(min, 1)} % (claro) a ${dec(max, 1)} % (oscuro).`;
+    const barra = el("span", "gradiente");
+    ley.append(`Participación de residentes (cifra en cada casilla, %): ${dec(min, 1)} %`, barra, `${dec(max, 1)} %`);
   }
 }
 
@@ -134,7 +139,23 @@ function pintarDetalle() {
   });
 }
 
-function pintar() { pintarMapa(); pintarDetalle(); }
+let vista = "prov"; // "prov" (mosaico de provincias) o "mun" (mapa de municipios)
+
+function pintar() {
+  if (vista === "mun") { Municipal.pintar(); return; }
+  pintarMapa();
+  pintarDetalle();
+}
+
+function cambiarVista(v) {
+  vista = v;
+  $("#vista-prov").classList.toggle("activa", v === "prov");
+  $("#vista-mun").classList.toggle("activa", v === "mun");
+  document.querySelector(".rejilla").classList.toggle("vista-mun", v === "mun");
+  $("#bloque-prov").hidden = v !== "prov";
+  $("#bloque-mun").hidden = v !== "mun";
+  if (v === "mun") Municipal.iniciar().then(pintar); else pintar();
+}
 
 async function inicio() {
   DATOS = window.RESULTADOS || await (await fetch("data/resultados.json")).json();
@@ -142,8 +163,10 @@ async function inicio() {
   DATOS.elecciones.forEach((e) => sel.appendChild(Object.assign(el("option"), { value: e.id, textContent: e.fecha })));
   sel.value = "2023";
   sel.addEventListener("change", pintar);
-  $("#metrica").addEventListener("change", pintarMapa);
-  $("#volver").addEventListener("click", () => { seleccion = null; pintar(); });
+  $("#metrica").addEventListener("change", pintar);
+  $("#volver").addEventListener("click", () => { seleccion = null; Municipal.limpiar(); pintar(); });
+  $("#vista-prov").addEventListener("click", () => cambiarVista("prov"));
+  $("#vista-mun").addEventListener("click", () => cambiarVista("mun"));
   pintar();
 }
 inicio().catch((err) => { document.querySelector("main").prepend(el("p", "aviso", "No se pudieron cargar los datos (" + err.message + "). Comprueba que existe web/data/resultados.js.")); });
