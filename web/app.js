@@ -139,10 +139,11 @@ function pintarDetalle() {
   });
 }
 
-let vista = "prov"; // "prov" (mosaico de provincias) o "mun" (mapa de municipios)
+let vista = "prov"; // "prov" (mosaico de provincias), "mun" (mapa de municipios) o "sec" (secciones censales)
 
 function pintar() {
   if (vista === "mun") { Municipal.pintar(); return; }
+  if (vista === "sec") { Seccion.pintar(); return; }
   pintarMapa();
   pintarDetalle();
 }
@@ -151,10 +152,15 @@ function cambiarVista(v) {
   vista = v;
   $("#vista-prov").classList.toggle("activa", v === "prov");
   $("#vista-mun").classList.toggle("activa", v === "mun");
-  document.querySelector(".rejilla").classList.toggle("vista-mun", v === "mun");
+  $("#vista-sec").classList.toggle("activa", v === "sec");
+  document.querySelector(".rejilla").classList.toggle("vista-mun", v !== "prov");
   $("#bloque-prov").hidden = v !== "prov";
   $("#bloque-mun").hidden = v !== "mun";
-  if (v === "mun") Municipal.iniciar().then(pintar); else pintar();
+  $("#bloque-sec").hidden = v !== "sec";
+  if (v === "sec" && !["2019a", "2019b", "2023"].includes($("#eleccion").value)) $("#eleccion").value = "2023";
+  if (v === "mun") Municipal.iniciar().then(pintar);
+  else if (v === "sec") Seccion.iniciar().then(pintar);
+  else pintar();
 }
 
 async function inicio() {
@@ -164,7 +170,8 @@ async function inicio() {
   sel.value = "2023";
   sel.addEventListener("change", pintar);
   $("#metrica").addEventListener("change", pintar);
-  $("#volver").addEventListener("click", () => { seleccion = null; Municipal.limpiar(); pintar(); });
+  $("#volver").addEventListener("click", () => { seleccion = null; Municipal.limpiar(); Seccion.limpiar(); pintar(); });
+  $("#vista-sec").addEventListener("click", () => cambiarVista("sec"));
   $("#vista-prov").addEventListener("click", () => cambiarVista("prov"));
   $("#vista-mun").addEventListener("click", () => cambiarVista("mun"));
   pintar();

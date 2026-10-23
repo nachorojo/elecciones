@@ -1,5 +1,8 @@
 # Web electoral por mesa (Generales 1996–2023 → 29N)
 
+> **Retomando el trabajo (otro PC, solo GitHub): lee primero [HANDOFF.md](HANDOFF.md)** — qué hay y qué no hay en la repo,
+> cómo recuperar los datos, estado de la web, decisiones, pendientes y trampas. Este fichero es el detalle de datos y decisiones.
+
 ## Objetivo
 1. Web pública de consulta: resultados de las generales 1996–2023 por municipio y sección censal, con contexto socioeconómico. Se actualizará con el 29N.
 2. Más adelante: modelo predictivo validado (proyección de escrutinio la noche electoral y/o reparto territorial).
