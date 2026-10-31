@@ -1,3 +1,11 @@
+---
+estado: "EN MARCHA — web de datos electorales por mesa (generales 1996–2023). Pendientes: actualización con el 29N y modelo predictivo."
+revisado: "2026-10-31"
+proximo: "Leer HANDOFF.md del repo (estado, decisiones, pendientes y trampas) y preparar la carga de resultados del 29N."
+corre_en: "Netlify (proyecto `elecciones2030`) desde GitHub nachorojo/elecciones. Datos fuera del repo, en `Elecciones 2026/datos/` (OneDrive)."
+bloqueos: "Ver «Pendiente de decidir» en este doc."
+---
+
 # Web electoral por mesa (Generales 1996–2023 → 29N)
 
 > **Retomando el trabajo (otro PC, solo GitHub): lee primero [HANDOFF.md](HANDOFF.md)** — qué hay y qué no hay en la repo,
