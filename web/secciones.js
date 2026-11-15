@@ -3,6 +3,27 @@
    Resultados: data/sec/NN.json = {sección: {elección: [censo, votantes, blancos, nulos, candidaturas,
    [[cód, votos] x3], cód_ganador_anterior|null, cambio 0/1|null]}}; data/partidos_sec.json traduce códigos. */
 const Seccion = (() => {
+  /* Nombres de los distritos censales (el INE solo da el número). Solo las ciudades donde el distrito censal
+     coincide con el distrito municipal, comprobado con la posición de cada distrito en la cartografía de 2019 y 2023.
+     Málaga y Zaragoza no están: su numeración censal no coincide con la de sus distritos municipales. */
+  const DISTRITOS = {
+    "28079": ["Centro", "Arganzuela", "Retiro", "Salamanca", "Chamartín", "Tetuán", "Chamberí", "Fuencarral-El Pardo",
+      "Moncloa-Aravaca", "Latina", "Carabanchel", "Usera", "Puente de Vallecas", "Moratalaz", "Ciudad Lineal", "Hortaleza",
+      "Villaverde", "Villa de Vallecas", "Vicálvaro", "San Blas-Canillejas", "Barajas"],
+    "08019": ["Ciutat Vella", "Eixample", "Sants-Montjuïc", "Les Corts", "Sarrià-Sant Gervasi", "Gràcia", "Horta-Guinardó",
+      "Nou Barris", "Sant Andreu", "Sant Martí"],
+    "46250": ["Ciutat Vella", "L'Eixample", "Extramurs", "Campanar", "La Saïdia", "El Pla del Real", "L'Olivereta", "Patraix",
+      "Jesús", "Quatre Carreres", "Poblats Marítims", "Camins al Grau", "Algirós", "Benimaclet", "Rascanya", "Benicalap",
+      "Pobles del Nord", "Pobles de l'Oest", "Pobles del Sud"],
+    "41091": ["Casco Antiguo", "Macarena", "Nervión", "Cerro-Amate", "Sur", "Triana", "Norte", "San Pablo-Santa Justa",
+      "Este-Alcosa-Torreblanca", "Bellavista-La Palmera", "Los Remedios"],
+    "48020": ["Deusto", "Uribarri", "Otxarkoaga-Txurdinaga", "Begoña", "Ibaiondo", "Abando", "Errekalde", "Basurto-Zorrotza"]
+  };
+  const distrito = (s) => {
+    const n = (DISTRITOS[s.slice(0, 5)] || [])[Number(s.slice(5, 7)) - 1];
+    return n ? `distrito ${s.slice(5, 7)} (${n})` : `distrito ${s.slice(5, 7)}`;
+  };
+
   const LEAFLET = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet";
   const ELECCIONES = ["2019a", "2019b", "2023"];
   const ANTERIOR = { "2019b": "2019a", "2023": "2019b" };
@@ -53,7 +74,7 @@ const Seccion = (() => {
 
   function hover(s) {
     const r = resumen(s);
-    const nombre = `${muniNombre(s.slice(0, 5))} · distrito ${s.slice(5, 7)} · sección ${s.slice(7)}`;
+    const nombre = `${muniNombre(s.slice(0, 5))} · ${distrito(s)} · sección ${s.slice(7)}`;
     if (!r) return `${nombre}: sin datos en esta elección.`;
     return `${nombre}: ${r.siglas} ${dec(r.cuota, 1)} % · participación ${dec(r.part, 1)} % · ${num(r.f[0])} electores`;
   }
@@ -76,7 +97,7 @@ const Seccion = (() => {
       ["#resumen", "#partidos", "#historia"].forEach((q) => $(q).replaceChildren());
       $("#otros").textContent = "Pulsa una sección del mapa para ver sus tres candidaturas más votadas y si cambió el ganador. Una sección censal agrupa de unos cientos a unas 2.000 personas y NO equivale a una calle."; return; }
     const s = seleccionada, r = resumen(s), e = elec();
-    $("#titulo").textContent = `${muniNombre(s.slice(0, 5))} · distrito ${s.slice(5, 7)}, sección ${s.slice(7)}`;
+    $("#titulo").textContent = `${muniNombre(s.slice(0, 5))} · ${distrito(s)}, sección ${s.slice(7)}`;
     $("#volver").hidden = false;
     $("#fecha").textContent = `Elecciones generales de ${NOMBRE_EL[e]} · ${provNombre(s.slice(0, 2))}`;
     const res = $("#resumen"), lista = $("#partidos");

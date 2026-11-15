@@ -1,15 +1,5 @@
 /* Atlas Electoral — versión estática. Lee data/resultados.json (pipeline/export_web.py).
-   Mosaico de provincias y siglas: adaptados de la web local de Mikel Ibáñez (tfm_web). */
-const MOSAICO = {
-  "15":[1,0],"27":[2,0],"33":[3,0],"39":[4,0],"48":[5,0],"20":[6,0],
-  "36":[1,1],"32":[2,1],"24":[3,1],"34":[4,1],"09":[5,1],"01":[6,1],"31":[7,1],"22":[8,1],"25":[9,1],"17":[10,1],
-  "49":[2,2],"47":[3,2],"42":[4,2],"26":[5,2],"50":[6,2],"44":[7,2],"08":[9,2],"43":[10,2],
-  "37":[2,3],"05":[3,3],"40":[4,3],"19":[5,3],"28":[6,3],"12":[8,3],
-  "10":[2,4],"45":[3,4],"16":[4,4],"13":[5,4],"46":[7,4],"07":[9,4],
-  "06":[2,5],"41":[3,5],"14":[4,5],"23":[5,5],"02":[6,5],"03":[7,5],
-  "21":[2,6],"11":[3,6],"29":[4,6],"18":[5,6],"30":[6,6],"04":[7,6],
-  "38":[0,7],"35":[1,7],"51":[3,8],"52":[4,8]
-};
+   Siglas de provincia: adaptadas de la web local de Mikel Ibáñez (tfm_web). */
 const SIGLAS = {
   "01":"VI","02":"AB","03":"A","04":"AL","05":"AV","06":"BA","07":"IB","08":"B","09":"BU",
   "10":"CC","11":"CA","12":"CS","13":"CR","14":"CO","15":"C","16":"CU","17":"GI","18":"GR",
@@ -46,6 +36,47 @@ const el = (tag, cls, texto) => {
   if (texto !== undefined) n.textContent = texto;
   return n;
 };
+
+/* Mapa de provincias (data/provincias.js, generado por pipeline/export_provincias.py). `estilo(cod)` devuelve
+   {fill, title, activa} o null si la provincia no tiene datos; `alPulsar(cod)` recibe el clic. Canarias va en un recuadro. */
+function mapaProvincias(cont, estilo, alPulsar) {
+  const M = window.MAPA_PROV, NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${M.ancho} ${M.alto}`);
+  svg.setAttribute("class", "mapa-prov");
+  const marco = document.createElementNS(NS, "rect");
+  [["x", M.canarias[0]], ["y", M.canarias[1]], ["width", M.canarias[2]], ["height", M.canarias[3]], ["class", "marco-canarias"]]
+    .forEach(([k, v]) => marco.setAttribute(k, v));
+  svg.appendChild(marco);
+  let activa = null;
+  const pieza = (cod, forma) => {
+    const e = estilo(cod) || { fill: "var(--superficie-alta)", title: SIGLAS[cod] };
+    forma.setAttribute("fill", e.fill);
+    forma.setAttribute("class", "prov" + (e.activa ? " activa" : ""));
+    forma.setAttribute("tabindex", "0");
+    forma.setAttribute("role", "button");
+    forma.setAttribute("aria-label", e.title);
+    const t = document.createElementNS(NS, "title");
+    t.textContent = e.title;
+    forma.appendChild(t);
+    forma.addEventListener("click", () => alPulsar(cod));
+    forma.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); alPulsar(cod); } });
+    if (e.activa) activa = forma; else svg.appendChild(forma);
+  };
+  for (const [cod, d] of Object.entries(M.p)) {
+    if (M.puntos[cod]) continue;          // Ceuta y Melilla: solo el punto (su contorno no se ve a esta escala)
+    const path = document.createElementNS(NS, "path");
+    path.setAttribute("d", d);
+    pieza(cod, path);
+  }
+  for (const [cod, [x, y]] of Object.entries(M.puntos)) {
+    const c = document.createElementNS(NS, "circle");
+    c.setAttribute("cx", x); c.setAttribute("cy", y); c.setAttribute("r", 6);
+    pieza(cod, c);
+  }
+  if (activa) svg.appendChild(activa);   // la seleccionada, encima, para que se vea su borde
+  cont.replaceChildren(svg);
+}
 
 let DATOS = null;
 let seleccion = null; // código de provincia, o null para España
@@ -117,45 +148,25 @@ function hemiciclo(e, previa) {
 
 function pintarMapa() {
   const e = actual();
-  const mapa = $("#mapa");
-  mapa.replaceChildren();
   const metrica = $("#metrica").value;
   const parts = Object.values(e.provincias).map((p) => p.participacion_residentes);
   const [min, max] = [Math.min(...parts), Math.max(...parts)];
-  for (const [cod, [x, y]] of Object.entries(MOSAICO)) {
+  mapaProvincias($("#mapa"), (cod) => {
     const prov = e.provincias[cod];
-    if (!prov) continue;
-    const b = el("button", "casilla" + (cod === seleccion ? " activa" : ""), SIGLAS[cod]);
-    b.type = "button";
-    b.style.gridColumn = x + 1;
-    b.style.gridRow = y + 1;
+    if (!prov) return null;
     const g = ganador(prov);
-    if (!g) {
-      b.style.background = "var(--superficie-alta)";
-      b.style.color = "var(--texto-tenue)";
-      b.style.textShadow = "none";
-      b.title = `${prov.nombre}: sin datos todavía · ${prov.escanos_total} escaños`;
-      b.setAttribute("aria-label", b.title);
-      b.addEventListener("click", () => { seleccion = cod; pintar(); });
-      mapa.appendChild(b);
-      continue;
-    }
+    if (!g) return { fill: "var(--superficie-alta)", activa: cod === seleccion, title: `${prov.nombre}: sin datos todavía · ${prov.escanos_total} escaños` };
+    let fill;
     if (metrica === "ganador") {
       // Color del partido; cuanto más pálido, más ajustada la ventaja de su cuota de voto.
       const t = Math.min(1, Math.max(0, (100 * g.v / prov.validos - 25) / 30));
-      b.style.background = `color-mix(in srgb, ${color(g.f)} ${Math.round(40 + 60 * t)}%, var(--superficie-alta))`;
+      fill = `color-mix(in srgb, ${color(g.f)} ${Math.round(40 + 60 * t)}%, var(--superficie-alta))`;
     } else {
-      const t = (prov.participacion_residentes - min) / (max - min || 1);
-      b.style.background = `hsl(215 75% ${90 - 58 * t}%)`;
-      b.style.color = t > 0.5 ? "#fff" : "#12171f";
-      b.style.textShadow = "none";
-      b.textContent = String(Math.round(prov.participacion_residentes));
+      fill = `hsl(215 75% ${90 - 58 * (prov.participacion_residentes - min) / (max - min || 1)}%)`;
     }
-    b.title = `${prov.nombre}: ${g.s} (${dec(100 * g.v / prov.validos, 1)} %) · participación ${dec(prov.participacion_residentes, 1)} %`;
-    b.setAttribute("aria-label", b.title);
-    b.addEventListener("click", () => { seleccion = cod; pintar(); });
-    mapa.appendChild(b);
-  }
+    return { fill, activa: cod === seleccion,
+             title: `${prov.nombre}: ${g.s} (${dec(100 * g.v / prov.validos, 1)} %) · participación ${dec(prov.participacion_residentes, 1)} %` };
+  }, (cod) => { seleccion = cod; pintar(); });
   const ley = $("#leyenda");
   ley.replaceChildren();
   if (metrica === "ganador") {
@@ -169,7 +180,7 @@ function pintarMapa() {
     });
   } else {
     const barra = el("span", "gradiente");
-    ley.append(`Participación de residentes (cifra en cada casilla, %): ${dec(min, 1)} %`, barra, `${dec(max, 1)} %`);
+    ley.append(`Participación de residentes: ${dec(min, 1)} %`, barra, `${dec(max, 1)} %`);
   }
 }
 

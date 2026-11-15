@@ -176,25 +176,16 @@ const Simulador = (() => {
   }
 
   function pintarMosaico() {
-    const mapa = $("#mapa-sim");
-    mapa.replaceChildren();
-    for (const [cod, [x, y]] of Object.entries(MOSAICO)) {
+    mapaProvincias($("#mapa-sim"), (cod) => {
       const d = D.provincias[cod];
       const fila = res.votos[cod];
       let g = null;
       for (const e in fila) if (e !== MotorSim.RESTO && (!g || fila[e] > fila[g])) g = e;
-      const b = el("button", "casilla" + (cod === provincia ? " activa" : ""), SIGLAS[cod]);
-      b.type = "button";
-      b.style.gridColumn = x + 1;
-      b.style.gridRow = y + 1;
       const t = Math.min(1, Math.max(0, (100 * fila[g] / d.validos - 25) / 30));
-      b.style.background = `color-mix(in srgb, ${col(g)} ${Math.round(40 + 60 * t)}%, var(--superficie-alta))`;
       const rep = Object.entries(res.escanos[cod]).sort((a, c) => c[1] - a[1]).map(([e, n]) => `${nombre(e)} ${n}`).join(", ");
-      b.title = `${d.nombre} (${d.escanos} escaños): ${rep}`;
-      b.setAttribute("aria-label", b.title);
-      b.addEventListener("click", () => { provincia = cod; pintar(); });
-      mapa.appendChild(b);
-    }
+      return { fill: `color-mix(in srgb, ${col(g)} ${Math.round(40 + 60 * t)}%, var(--superficie-alta))`,
+               activa: cod === provincia, title: `${d.nombre} (${d.escanos} escaños): ${rep}` };
+    }, (cod) => { provincia = cod; pintar(); });
   }
 
   function pintarDetalle() {

@@ -40,7 +40,7 @@ select {
   font: inherit; font-size: 14px; padding: 8px 12px; border-radius: 9px; min-width: 220px;
   border: 1px solid var(--borde); background: var(--superficie); color: var(--texto);
 }
-.rejilla { display: grid; grid-template-columns: minmax(300px, 420px) 1fr; gap: 18px; align-items: start; }
+.rejilla { display: grid; grid-template-columns: minmax(320px, 1fr) 1fr; gap: 18px; align-items: start; }
 @media (max-width: 800px) { .rejilla { grid-template-columns: 1fr; } main { padding: 16px; } }
 .tarjeta {
   background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio);
@@ -133,4 +133,9 @@ button.secundario {
 .hemi-mayoria { stroke: var(--texto); stroke-width: 1; stroke-dasharray: 3 2; }
 .aviso.prueba { margin: 0 0 12px; padding: 8px 12px; }
 .esc .sube { color: #1a9b4b; } .esc .baja { color: #d63a35; }
+.mapa-prov { display: block; width: 100%; height: auto; margin-top: 4px; }
+.mapa-prov .prov { stroke: var(--superficie); stroke-width: .8; cursor: pointer; outline: none; }
+.mapa-prov .prov:hover { filter: brightness(1.12); }
+.mapa-prov .prov.activa, .mapa-prov .prov:focus-visible { stroke: var(--texto); stroke-width: 2; }
+.marco-canarias { fill: none; stroke: var(--borde); stroke-width: 1; }
 [hidden] { display: none !important; }

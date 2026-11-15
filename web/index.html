@@ -46,8 +46,8 @@
     <section class="tarjeta">
       <div id="bloque-prov">
         <h2>Mapa de provincias</h2>
-        <p class="nota">Cada casilla es una provincia (mosaico, no mapa geográfico). Pulsa una para ver su resultado.</p>
-        <div id="mapa" class="mapa" role="group" aria-label="Provincias"></div>
+        <p class="nota">Pulsa una provincia para ver su resultado. Canarias aparece desplazada, en el recuadro.</p>
+        <div id="mapa" role="group" aria-label="Provincias"></div>
       </div>
       <div id="bloque-mun" hidden>
         <h2>Mapa de municipios</h2>
@@ -96,7 +96,7 @@
         <p id="sim-suma" class="nota sim-suma"></p>
         <button id="sim-reiniciar" class="secundario" type="button">Volver al voto de 2023</button>
         <h3>Candidatura más votada por provincia en tu escenario</h3>
-        <div id="mapa-sim" class="mapa" role="group" aria-label="Provincias (escenario)"></div>
+        <div id="mapa-sim" role="group" aria-label="Provincias (escenario)"></div>
       </div>
       <div id="leyenda" class="leyenda"></div>
     </section>
@@ -148,6 +148,7 @@
 </footer>
 
 <script src="data/resultados.js"></script>
+<script src="data/provincias.js"></script>
 <script src="municipios.js"></script>
 <script src="secciones.js"></script>
 <script src="simulador.js"></script>
