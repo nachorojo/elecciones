@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atlas Electoral · TFM</title>
+<link rel="stylesheet" href="/static/estilo.css">
+</head>
+<body>
+<header class="cabecera">
+  <div class="marca">
+    <div class="logo"></div>
+    <div>
+      <h1>Atlas Electoral</h1>
+      <p>Elecciones generales en España, 1996&ndash;2023 · <span id="conteo"></span></p>
+    </div>
+  </div>
+  <div id="estado-llm" class="insignia cargando">comprobando modelo…</div>
+</header>
+
+<nav class="pestanas">
+  <button class="pestana activa" data-panel="chat">Preguntar</button>
+  <button class="pestana" data-panel="explorar">Explorar</button>
+  <button class="pestana" data-panel="escenarios">Escenarios</button>
+  <button class="pestana" data-panel="backtest">Validación</button>
+</nav>
+
+<main>
+  <section id="panel-chat" class="panel activo">
+    <div class="chat-envoltura">
+      <div id="conversacion" class="conversacion"></div>
+      <div class="sugerencias" id="sugerencias"></div>
+      <form id="formulario" class="entrada">
+        <input id="pregunta" type="text" autocomplete="off" spellcheck="false"
+               placeholder="¿Quién ganó en Sevilla en 2011?">
+        <button type="submit" id="enviar">Preguntar</button>
+      </form>
+    </div>
+  </section>
+
+  <section id="panel-explorar" class="panel">
+    <div class="controles">
+      <label>Convocatoria
+        <select id="ex-eleccion"></select>
+      </label>
+      <label>Colorear por
+        <select id="ex-metrica">
+          <option value="ganador">Partido ganador</option>
+          <option value="indice_izq_der">Índice izquierda-derecha</option>
+          <option value="participacion">Participación</option>
+        </select>
+      </label>
+      <label class="buscador">Territorio
+        <input id="ex-buscar" type="text" autocomplete="off" placeholder="Buscar municipio, provincia…">
+        <div id="ex-resultados" class="desplegable"></div>
+      </label>
+    </div>
+    <div class="rejilla-explorar">
+      <div class="tarjeta">
+        <h2>Mapa de provincias</h2>
+        <div id="mapa"></div>
+        <div id="leyenda" class="leyenda"></div>
+      </div>
+      <div class="tarjeta">
+        <h2 id="detalle-titulo">España</h2>
+        <div id="detalle"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="panel-escenarios" class="panel">
+    <div class="aviso">
+      <strong>Esto no es una predicción.</strong> Entre 1996 y 2023 el vuelco del voto nacional
+      de una convocatoria a la siguiente tiene una desviación típica de 11,7 puntos. Con nueve
+      saltos observados, ese vuelco no se puede aprender. Lo que hace este simulador es
+      repartir por el territorio un resultado nacional que tú decides.
+    </div>
+    <div class="rejilla-escenarios">
+      <div class="tarjeta">
+        <h2>Resultado nacional</h2>
+        <p class="nota">Parte del resultado real de 2023. Mueve los valores y el modelo
+           recalcula el reparto por provincia.</p>
+        <div id="deslizadores"></div>
+        <div class="acciones">
+          <button id="simular" class="principal">Simular</button>
+          <button id="reiniciar" class="secundario">Volver a 2023</button>
+        </div>
+        <div id="suma-total" class="nota"></div>
+      </div>
+      <div class="tarjeta">
+        <h2>Reparto territorial</h2>
+        <div id="mapa-escenario"></div>
+        <div id="resumen-escenario"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="panel-backtest" class="panel">
+    <div class="tarjeta ancha">
+      <h2>¿Funciona el modelo?</h2>
+      <p class="nota" id="backtest-intro">Cargando…</p>
+      <div id="backtest-metricas"></div>
+      <h3>Predicho frente a real en los mayores municipios</h3>
+      <div id="backtest-dispersión"></div>
+      <div id="backtest-tabla"></div>
+    </div>
+  </section>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
