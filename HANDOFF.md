@@ -3,6 +3,26 @@
 Escrito el 2026-10-23 para retomar el trabajo desde otro PC **solo con GitHub** y sin acceso a la conversación
 original. Léelo entero antes de tocar nada; después lee `CLAUDE.md` (hallazgos y decisiones, más largo).
 
+## 0. Por dónde seguir (escrito el 2026-11-15 por la noche)
+Estado: la web publicada tiene «29 de noviembre de 2026» en el desplegable (vacío hasta que haya datos), mapa de provincias,
+hemiciclo y simulador oculto (`?simulador`). Detalle de todo lo hecho ese día en `CLAUDE.md` (secciones fechadas 2026-11-15).
+Orden propuesto, con las fechas que mandan:
+1. **Lunes 16 — reconstruir la noche electoral de 2023 por municipio** (no depende de nadie). Con `tfm/db_tfm/db_municipios.parquet`
+   y `web/data/mun/`: simular que los municipios llegan en distintos órdenes (pequeños primero, al azar, por provincias) y medir el
+   error de la proyección de escaños con el 5, 10, 30, 60 y 90 % escrutado. Proyección = comparar cada municipio escrutado con su
+   2023 y extrapolar al resto, pesando con el censo del 29N (`data/ine/censo_electoral_29n/`, tab4). De ahí sale el margen que se
+   enseñará. Método de referencia: repetir el perfil relativo anterior (ver «Revisión del TFM» en `CLAUDE.md`).
+2. **Martes 17 — llegan URL y credenciales de la API de Interior.** Probar `pipeline/escrutinio_29n.py --descargar` (la
+   autenticación básica es una suposición), bajar los ficheros fijos (`getCandidaturas`, resultados de 2023 por municipio) y
+   mapear códigos de candidatura. Añadir el lector de `getEscrutinioMunicipios`. Las credenciales NUNCA van a la repo.
+3. **Miércoles 18, 15:00–18:00 — simulacro de Interior.** Grabar todos los envíos (totales y municipios) con su hora. Rotular la
+   página como «SIMULACRO» mientras dure. Decidir antes desde dónde se descarga y cómo se publica cada pocos minutos (la web de
+   Netlify es estática y no puede guardar credenciales).
+4. **Antes del 24 de noviembre:** respuesta de Jurídico sobre simulador y proyección (LOREG 69.7); validar con Redacción la
+   agrupación de candidaturas; decidir si la proyección se enseña en la web o solo se usa en antena.
+5. **Si sobra tiempo:** perfil territorial de SALF y reparto Frente Amplio/Podemos con las Europeas 2024 (hay que bajar el zip de
+   Interior desde el PC: desde la nube Interior devuelve 403); nivel municipal en vivo en la web.
+
 ## 1. Qué es el proyecto
 Web para ondacero.es con datos de las elecciones generales 1996–2023 y, más adelante, simulador/predictor para el
 **29 de noviembre de 2026** (29N). Tres capas:
