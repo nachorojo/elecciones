@@ -77,7 +77,7 @@ web/                         sitio estático: index.html, estilo.css, app.js (pr
 data/web/                    clasificación de candidaturas de Mikel (usada para colorear partidos)
   convocatoria_29n.py        BOE → escaños por circunscripción y candidaturas proclamadas del 29N
   simulador.py               ajuste territorial (IPF) + d'Hondt, backtest y web/data/simulador.json
-tests/                       96 tests (se saltan solos si faltan los datos; los del 29N y el simulador no)
+tests/                       92 tests (se saltan solos si faltan los datos; los del 29N y el simulador no)
 ```
 
 ## 6. Estado de la web (`web/`)
