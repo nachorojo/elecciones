@@ -16,6 +16,7 @@ Nacho Rojo con Claude. Cartografía: INE (CC BY 4.0, hay que citarlo). Resultado
 
 ## 2. Qué hay en GitHub y qué NO (importante)
 Repo: `github.com/nachorojo/elecciones`, rama `claude/blissful-dirac-j8h7p9` (es la rama de trabajo; `main` no se usa).
+**Sesión del 2026-11-15** (convocatoria del 29N y simulador): en la rama `claude/quirky-newton-eivw3d`, que parte de la anterior; hay que fusionarla en la de trabajo.
 
 | En GitHub | NO está en GitHub (solo en el PC del trabajo, carpeta `Elecciones 2026\`) |
 |---|---|
@@ -74,7 +75,9 @@ pipeline/
   export_mapa.py             descarga y simplifica cartografía INE → municipios.geojson y sec/g/AAAA/NN.geojson
 web/                         sitio estático: index.html, estilo.css, app.js (provincias), municipios.js, secciones.js, data/
 data/web/                    clasificación de candidaturas de Mikel (usada para colorear partidos)
-tests/                       75 tests (se saltan solos si faltan los datos)
+  convocatoria_29n.py        BOE → escaños por circunscripción y candidaturas proclamadas del 29N
+  simulador.py               ajuste territorial (IPF) + d'Hondt, backtest y web/data/simulador.json
+tests/                       96 tests (se saltan solos si faltan los datos; los del 29N y el simulador no)
 ```
 
 ## 6. Estado de la web (`web/`)
@@ -130,10 +133,14 @@ fronteras compartidas. Cada regeneración de geometrías añade ~36 MB por año 
 1. **Nivel de sección: HECHO** para abril 2019, noviembre 2019 y 2023 (límites INE de 2019 y 2023 en `web/data/sec/g/`). Pendiente
    solo probarlo en Netlify y, si se quiere, añadir años (las capas `Secciones_AAAA` del INE existen de 2007 a 2025; 1996–2004 no).
    Para otro año: `M.descargar_secciones(AAAA, carpeta)` y `M.construir_secciones(carpeta, AAAA)` (~30 min de descarga, sin datos locales).
-2. **Simulador de escenarios estático** con escaños: exportar `rel` por municipio desde el modelo de Mikel
+2. **Simulador de escaños: HECHO a nivel provincial** (2026-11-15; `pipeline/simulador.py`, `web/simulador.js`, pestaña visible solo con
+   `?simulador`). Escaños y candidaturas del 29N del BOE: hechos (`pipeline/convocatoria_29n.py`). Detalle y error medido en `CLAUDE.md`,
+   sección «Convocatoria del 29N y simulador». Pendiente: validar con Redacción la agrupación de candidaturas, perfil territorial de SALF
+   (Europeas 2024), decidir con Jurídico si se enseña, y enlazar escenarios por URL. Lo que sigue era el plan original (nivel municipal):
+2b. **Simulador de escenarios estático** con escaños: exportar `rel` por municipio desde el modelo de Mikel
    (`datos\TFM\tfm_web\motor\escenarios.py`), reescalar al resultado nacional elegido, agregar por provincia, d'Hondt en JS.
    Hay que estimar el CERA por provincia (mantener proporción de la última elección) y tratar Usansolo.
-3. **Listas del 29N** (se publican el 28 de octubre): candidaturas por circunscripción y escaños por provincia.
+3. **Listas del 29N: HECHO** (BOE; 534 candidaturas al Congreso, Madrid 38 y Cádiz 8 escaños).
 4. Incorporar votos **posteriores a julio de 2023** (Europeas 2024, autonómicas) como señal de desplazamiento.
 5. Mapear candidaturas a partidos/familias de forma única (mesas y CERA); validar con Redacción antes de publicar bloques.
 6. Chatbot (reglas deterministas de Mikel portadas a JS; LLM opcional).

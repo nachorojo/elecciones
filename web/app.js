@@ -139,9 +139,10 @@ function pintarDetalle() {
   });
 }
 
-let vista = "prov"; // "prov" (mosaico de provincias), "mun" (mapa de municipios) o "sec" (secciones censales)
+let vista = "prov"; // "prov" (mosaico de provincias), "mun" (municipios), "sec" (secciones) o "sim" (simulador 29N)
 
 function pintar() {
+  if (vista === "sim") { Simulador.pintar(); return; }
   if (vista === "mun") { Municipal.pintar(); return; }
   if (vista === "sec") { Seccion.pintar(); return; }
   pintarMapa();
@@ -153,12 +154,22 @@ function cambiarVista(v) {
   $("#vista-prov").classList.toggle("activa", v === "prov");
   $("#vista-mun").classList.toggle("activa", v === "mun");
   $("#vista-sec").classList.toggle("activa", v === "sec");
-  document.querySelector(".rejilla").classList.toggle("vista-mun", v !== "prov");
+  $("#vista-sim").classList.toggle("activa", v === "sim");
+  document.querySelector(".rejilla").classList.toggle("vista-mun", v === "mun" || v === "sec");
+  document.querySelector(".rejilla").classList.toggle("vista-sim", v === "sim");
+  $("#bloque-sim").hidden = v !== "sim";
+  $("#aviso-sim").hidden = v !== "sim";
+  $("#aviso-datos").hidden = v === "sim";
+  $("#etq-eleccion").hidden = v === "sim";
+  $("#leyenda").hidden = v === "sim";
+  $("#titulo-historia").hidden = v === "sim";
+  $("#historia").hidden = v === "sim";
   $("#bloque-prov").hidden = v !== "prov";
   $("#bloque-mun").hidden = v !== "mun";
   $("#bloque-sec").hidden = v !== "sec";
   if (v === "sec" && !["2019a", "2019b", "2023"].includes($("#eleccion").value)) $("#eleccion").value = "2023";
-  if (v === "mun") Municipal.iniciar().then(pintar);
+  if (v === "sim") Simulador.iniciar().then(pintar);
+  else if (v === "mun") Municipal.iniciar().then(pintar);
   else if (v === "sec") Seccion.iniciar().then(pintar);
   else pintar();
 }
@@ -170,7 +181,12 @@ async function inicio() {
   sel.value = "2023";
   sel.addEventListener("change", pintar);
   $("#metrica").addEventListener("change", pintar);
-  $("#volver").addEventListener("click", () => { seleccion = null; Municipal.limpiar(); Seccion.limpiar(); pintar(); });
+  $("#volver").addEventListener("click", () => { seleccion = null; Municipal.limpiar(); Seccion.limpiar(); Simulador.limpiar(); pintar(); });
+  // El simulador no se enseña en abierto hasta que Jurídico confirme (LOREG art. 69.7): solo con ?simulador en la dirección.
+  if (new URLSearchParams(location.search).has("simulador")) {
+    $("#vista-sim").hidden = false;
+    $("#vista-sim").addEventListener("click", () => cambiarVista("sim"));
+  }
   $("#vista-sec").addEventListener("click", () => cambiarVista("sec"));
   $("#vista-prov").addEventListener("click", () => cambiarVista("prov"));
   $("#vista-mun").addEventListener("click", () => cambiarVista("mun"));

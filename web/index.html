@@ -22,7 +22,7 @@
 
 <main>
   <div class="controles">
-    <label>Convocatoria
+    <label id="etq-eleccion">Convocatoria
       <select id="eleccion"></select>
     </label>
     <!-- Colorear por participación: retirado de la interfaz (no aportaba al mapa; la participación sale en la ficha).
@@ -37,6 +37,8 @@
       <button id="vista-prov" class="vista activa" type="button">Provincias</button>
       <button id="vista-mun" class="vista" type="button">Municipios</button>
       <button id="vista-sec" class="vista" type="button">Secciones</button>
+      <!-- Simulador del 29N: oculto salvo que la dirección lleve ?simulador (pendiente del visto bueno de Jurídico). -->
+      <button id="vista-sim" class="vista" type="button" hidden>Simulador 29N</button>
     </div>
   </div>
 
@@ -84,6 +86,18 @@
         <div id="mapa-sec" class="mapa-mun" aria-label="Mapa de secciones censales"></div>
         <p id="hover-sec" class="nota hover">Pasa el ratón o pulsa una sección.</p>
       </div>
+      <div id="bloque-sim" hidden>
+        <h2>Simulador de escaños · 29 de noviembre de 2026</h2>
+        <p class="nota">Elige el porcentaje nacional de cada candidatura y mira qué reparto de escaños saldría.
+          <strong>No es un pronóstico ni un sondeo</strong>: el punto de partida es el voto de julio de 2023 y el
+          reparto por provincias supone que cada candidatura conserva su perfil territorial de 2023.</p>
+        <div id="estado-sim" class="nota">Cargando el simulador…</div>
+        <div id="sim-controles"></div>
+        <p id="sim-suma" class="nota sim-suma"></p>
+        <button id="sim-reiniciar" class="secundario" type="button">Volver al voto de 2023</button>
+        <h3>Candidatura más votada por provincia en tu escenario</h3>
+        <div id="mapa-sim" class="mapa" role="group" aria-label="Provincias (escenario)"></div>
+      </div>
       <div id="leyenda" class="leyenda"></div>
     </section>
 
@@ -96,12 +110,25 @@
       <div id="resumen" class="resumen"></div>
       <div id="partidos"></div>
       <p id="otros" class="nota"></p>
-      <h3>Candidatura más votada en cada elección</h3>
+      <h3 id="titulo-historia">Candidatura más votada en cada elección</h3>
       <div id="historia" class="historia"></div>
     </section>
   </div>
 
-  <section class="aviso">
+  <section id="aviso-sim" class="aviso" hidden>
+    <strong>Qué es y qué no es el simulador.</strong>
+    Es una calculadora de escenarios: tú pones el resultado nacional y la web aplica la ley electoral
+    (d'Hondt por circunscripción, barrera del 3 % de los votos válidos) con los escaños de cada provincia
+    fijados en el Real Decreto 806/2026 y las candidaturas proclamadas (BOE de 3 de noviembre de 2026).
+    <span id="sim-error"></span>
+    Supuestos: misma participación relativa por provincia que en 2023; el voto de Sumar de 2023 es la base
+    territorial de Frente Amplio, Podemos y sus listas conjuntas; Se Acabó la Fiesta no tiene historia en unas
+    generales y se le supone el mismo porcentaje en todas las provincias donde se presenta; a Vox, que en 2023 no
+    concurrió en Santa Cruz de Tenerife, se le supone allí su porcentaje medio del resto de España; las candidaturas sin
+    escaño en 2023 quedan en «resto» y no obtienen escaños. La agrupación de candidaturas es provisional.
+  </section>
+
+  <section id="aviso-datos" class="aviso">
     <strong>Cómo leer estas cifras.</strong>
     Datos oficiales del Ministerio del Interior. Los porcentajes son sobre
     <em>votos válidos</em> (candidaturas más votos en blanco). La participación es la de los electores
@@ -120,6 +147,7 @@
 <script src="data/resultados.js"></script>
 <script src="municipios.js"></script>
 <script src="secciones.js"></script>
+<script src="simulador.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
