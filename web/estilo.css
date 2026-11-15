@@ -68,7 +68,7 @@ button.secundario {
 .dato { background: var(--superficie-alta); border-radius: 10px; padding: 10px 12px; }
 .dato b { display: block; font-size: 19px; letter-spacing: -.01em; }
 .dato span { font-size: 12px; color: var(--texto-tenue); }
-.fila { display: grid; grid-template-columns: 110px 1fr 160px 64px; gap: 10px; align-items: center; padding: 5px 0; font-size: 14px; }
+.fila { display: grid; grid-template-columns: 110px 1fr 160px 84px; gap: 10px; align-items: center; padding: 5px 0; font-size: 14px; }
 .fila .barra { height: 12px; border-radius: 6px; background: var(--superficie-alta); overflow: hidden; }
 .fila .barra span { display: block; height: 100%; border-radius: 6px; }
 .fila .cifras { text-align: right; font-variant-numeric: tabular-nums; color: var(--texto-tenue); font-size: 12.5px; white-space: nowrap; }
@@ -125,4 +125,12 @@ button.secundario {
 .sim-suma { margin: 12px 0 10px; font-variant-numeric: tabular-nums; }
 .sim-exceso { color: var(--aviso); font-weight: 600; }
 @media (max-width: 520px) { .vista { padding: 8px 10px; font-size: 13px; } .sim-fila { grid-template-columns: 1fr 92px; } .sim-fila input[type="range"] { grid-column: 1 / -1; grid-row: 2; } }
+.hemiciclo { max-width: 380px; margin: 0 auto 14px; }
+.hemiciclo svg { display: block; width: 100%; height: auto; }
+.hemi-num { font-size: 10px; font-weight: 700; fill: #fff; }
+.hemi-etq { font-size: 9px; fill: var(--texto-tenue); }
+.hemi-may { font-size: 14px; font-weight: 700; fill: var(--texto); }
+.hemi-mayoria { stroke: var(--texto); stroke-width: 1; stroke-dasharray: 3 2; }
+.aviso.prueba { margin: 0 0 12px; padding: 8px 12px; }
+.esc .sube { color: #1a9b4b; } .esc .baja { color: #d63a35; }
 [hidden] { display: none !important; }

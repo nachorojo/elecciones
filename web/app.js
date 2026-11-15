@@ -21,16 +21,23 @@ const SIGLAS = {
 const COLOR = {
   PP: "#1D84CE", PSOE: "#E30713", VOX: "#5BA82B", PODEMOS_SUMAR: "#6B2E7A", CS: "#EB6109",
   IU: "#A61B29", UPYD: "#E4007C", ERC: "#E0A020", CIU_JXCAT: "#00A99D", PNV: "#0F6B3C",
-  EH_BILDU: "#7BA21A", BNG: "#5F93C0", CC: "#C9A400", COMPROMIS: "#D96A2B", OTROS: "#8D98A6"
+  EH_BILDU: "#7BA21A", BNG: "#5F93C0", CC: "#C9A400", COMPROMIS: "#D96A2B", OTROS: "#8D98A6",
+  // Espacios del 29N (pipeline/convocatoria_29n.py)
+  FA: "#E51C55", PODEMOS: "#6B2E7A", SALF: "#7A5230", JUNTS: "#00A99D", NC: "#3C8D5A", ADELANTE: "#2AA198",
+  TERUEL_EXISTE: "#4B6B4F", GBAI: "#B0333A", UPN: "#2A5C9A", PACMA: "#9BB52B", CUP: "#D8C400"
 };
 const ETIQUETA = {
   PP: "PP", PSOE: "PSOE", VOX: "Vox", PODEMOS_SUMAR: "Podemos / Sumar", CS: "Cs", IU: "IU", UPYD: "UPyD",
   ERC: "ERC", CIU_JXCAT: "CiU / Junts", PNV: "PNV", EH_BILDU: "EH Bildu", BNG: "BNG", CC: "CC",
   COMPROMIS: "Compromís", OTROS: "Otras"
 };
+// Familia de 2023 -> espacio de 2026 con el que se compara (solo donde hay continuidad clara).
+const ESPACIO_2023 = { PP: "PP", UPN: "PP", PSOE: "PSOE", VOX: "VOX", ERC: "ERC", CIU_JXCAT: "JUNTS",
+  EH_BILDU: "EH_BILDU", PNV: "PNV", BNG: "BNG", CC: "CC" };
+const DEMO = new URLSearchParams(location.search).has("demo");
 
 const $ = (s) => document.querySelector(s);
-const num = (x) => Math.round(x).toLocaleString("es-ES");
+const num = (x) => Math.round(x).toLocaleString("es-ES", { useGrouping: "always" });
 const dec = (x, d = 2) => x.toLocaleString("es-ES", { minimumFractionDigits: d, maximumFractionDigits: d });
 const color = (f) => COLOR[f] || COLOR.OTROS;
 const el = (tag, cls, texto) => {
@@ -44,7 +51,69 @@ let DATOS = null;
 let seleccion = null; // código de provincia, o null para España
 
 const actual = () => DATOS.elecciones.find((e) => e.id === $("#eleccion").value);
-const ganador = (ambito) => ambito.partidos.reduce((a, b) => (b.v > a.v ? b : a));
+const ganador = (ambito) => ambito.partidos.reduce((a, b) => (!a || b.v > a.v ? b : a), null);
+const enVivo = (e) => e.id === "2026";
+
+/* Escaños por partido en dos anillos: fuera la convocatoria elegida, dentro la anterior. */
+function hemiciclo(e, previa) {
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", "0 0 320 172");
+  svg.setAttribute("role", "img");
+  const arco = (r1, r2, a0, a1) => {
+    const pt = (r, a) => `${160 - r * Math.cos(a)},${160 - r * Math.sin(a)}`;
+    const g = a1 - a0 > Math.PI ? 1 : 0;
+    return `M${pt(r2, a0)}A${r2},${r2} 0 ${g} 1 ${pt(r2, a1)}L${pt(r1, a1)}A${r1},${r1} 0 ${g} 0 ${pt(r1, a0)}Z`;
+  };
+  const texto = (x, y, t, cls) => {
+    const n = document.createElementNS(NS, "text");
+    n.setAttribute("x", x); n.setAttribute("y", y); n.setAttribute("text-anchor", "middle");
+    if (cls) n.setAttribute("class", cls);
+    n.textContent = t;
+    svg.appendChild(n);
+  };
+  const anillo = (ambito, r1, r2) => {
+    const con = ambito.partidos.filter((p) => p.e > 0).sort((a, b) => b.e - a.e);
+    const total = ambito.escanos_total;
+    let acum = 0;
+    con.forEach((p) => {
+      const a0 = Math.PI * acum / total, a1 = Math.PI * (acum + p.e) / total;
+      const path = document.createElementNS(NS, "path");
+      path.setAttribute("d", arco(r1, r2, a0, a1));
+      path.setAttribute("fill", color(p.f));
+      path.setAttribute("stroke", "var(--superficie)");
+      path.setAttribute("stroke-width", ".6");
+      const t = document.createElementNS(NS, "title");
+      t.textContent = `${p.s}: ${p.e}`;
+      path.appendChild(t);
+      svg.appendChild(path);
+      if (p.e >= total * 0.06) {
+        const m = (a0 + a1) / 2, r = (r1 + r2) / 2;
+        texto(160 - r * Math.cos(m), 160 - r * Math.sin(m) + 4, String(p.e), "hemi-num");
+      }
+      acum += p.e;
+    });
+    if (!con.length) {
+      const path = document.createElementNS(NS, "path");
+      path.setAttribute("d", arco(r1, r2, 0, Math.PI));
+      path.setAttribute("fill", "var(--superficie-alta)");
+      svg.appendChild(path);
+    }
+  };
+  anillo(e.nacional, 108, 152);
+  if (previa) anillo(previa.nacional, 62, 100);
+  const l = document.createElementNS(NS, "line");
+  l.setAttribute("x1", 160); l.setAttribute("x2", 160); l.setAttribute("y1", 4); l.setAttribute("y2", 104);
+  l.setAttribute("class", "hemi-mayoria");
+  svg.appendChild(l);
+  texto(160, 132, "Mayoría absoluta", "hemi-etq");
+  texto(160, 147, String(Math.floor(e.nacional.escanos_total / 2) + 1), "hemi-may");
+  texto(160, 168, `${e.nacional.escanos_total} escaños`, "hemi-etq");
+  texto(22, 170, e.id.slice(0, 4), "hemi-etq");
+  if (previa) texto(70, 170, previa.id.slice(0, 4), "hemi-etq");
+  svg.setAttribute("aria-label", `Reparto de escaños de ${e.id}` + (previa ? ` (anillo interior: ${previa.id})` : ""));
+  return svg;
+}
 
 function pintarMapa() {
   const e = actual();
@@ -61,6 +130,16 @@ function pintarMapa() {
     b.style.gridColumn = x + 1;
     b.style.gridRow = y + 1;
     const g = ganador(prov);
+    if (!g) {
+      b.style.background = "var(--superficie-alta)";
+      b.style.color = "var(--texto-tenue)";
+      b.style.textShadow = "none";
+      b.title = `${prov.nombre}: sin datos todavía · ${prov.escanos_total} escaños`;
+      b.setAttribute("aria-label", b.title);
+      b.addEventListener("click", () => { seleccion = cod; pintar(); });
+      mapa.appendChild(b);
+      continue;
+    }
     if (metrica === "ganador") {
       // Color del partido; cuanto más pálido, más ajustada la ventaja de su cuota de voto.
       const t = Math.min(1, Math.max(0, (100 * g.v / prov.validos - 25) / 30));
@@ -80,7 +159,7 @@ function pintarMapa() {
   const ley = $("#leyenda");
   ley.replaceChildren();
   if (metrica === "ganador") {
-    const usados = [...new Set(Object.values(e.provincias).map((p) => ganador(p).f))];
+    const usados = [...new Set(Object.values(e.provincias).map((p) => ganador(p)).filter(Boolean).map((g) => g.f))];
     ley.appendChild(el("span", null, "Color = candidatura más votada; más pálido = ventaja más ajustada."));
     usados.forEach((f) => {
       const s = el("span");
@@ -99,40 +178,71 @@ function pintarDetalle() {
   const a = seleccion ? e.provincias[seleccion] : e.nacional;
   $("#titulo").textContent = a.nombre;
   $("#volver").hidden = !seleccion;
-  $("#fecha").textContent = `Elecciones generales del ${e.fecha} · ${a.escanos_total} escaños en juego`;
+  const vivo = enVivo(e);
+  $("#fecha").textContent = `Elecciones generales del ${e.fecha} · ${a.escanos_total} escaños en juego` +
+    (vivo ? (a.escrutado > 0 ? ` · recuento provisional${e.hora ? ", actualizado a las " + e.hora : ""}`
+                             : " · el escrutinio empieza a las 20:00") : "");
+  $("#aviso-prueba").hidden = !(vivo && e.prueba);
+  const hemi = $("#hemiciclo");
+  hemi.replaceChildren();
+  hemi.hidden = !!seleccion;
+  if (!seleccion) hemi.appendChild(hemiciclo(e, DATOS.elecciones[DATOS.elecciones.indexOf(e) - 1]));
   const r = $("#resumen");
   r.replaceChildren();
-  [[dec(a.participacion_residentes, 2) + " %", "participación (residentes)"],
-   [num(a.censo - a.cera.censo), "electores residentes"],
-   [num(a.validos), "votos válidos"],
-   [num(a.cera.votos), "votos CERA (exterior)"]].forEach(([v, l]) => {
+  (vivo
+    ? [[dec(a.escrutado, 2) + " %", "escrutado (censo)"],
+       [a.escrutado > 0 ? dec(a.participacion_residentes, 2) + " %" : "—", "participación"],
+       [num(a.validos), "votos válidos contados"],
+       [num(a.censo), "electores"]]
+    : [[dec(a.participacion_residentes, 2) + " %", "participación (residentes)"],
+       [num(a.censo - a.cera.censo), "electores residentes"],
+       [num(a.validos), "votos válidos"],
+       [num(a.cera.votos), "votos CERA (exterior)"]]).forEach(([v, l]) => {
     const d = el("div", "dato");
     d.append(el("b", null, v), el("span", null, l));
     r.appendChild(d);
   });
   const lista = $("#partidos");
   lista.replaceChildren();
-  const tope = Math.max(...a.partidos.map((p) => p.v));
-  a.partidos.slice(0, 12).forEach((p) => {
+  const tope = Math.max(1, ...a.partidos.map((p) => p.v));
+  // 29N: diferencia de escaños con 2023, solo para espacios con continuidad (PP incluye a UPN, ahora en coalición).
+  const antes = {};
+  if (vivo) {
+    const e23 = DATOS.elecciones.find((x) => x.id === "2023");
+    (seleccion ? e23.provincias[seleccion] : e23.nacional).partidos.forEach((p) => {
+      const esp = ESPACIO_2023[p.f];
+      if (esp) antes[esp] = (antes[esp] || 0) + p.e;
+    });
+  }
+  const comparables = new Set(Object.values(ESPACIO_2023));
+  const filas = vivo ? [...a.partidos].sort((x, y) => y.e - x.e || y.v - x.v) : a.partidos;
+  if (!filas.length) lista.appendChild(el("p", "nota", "Todavía no hay votos contados. Mientras tanto, el anillo interior muestra el reparto de 2023."));
+  filas.slice(0, vivo ? 16 : 12).forEach((p) => {
     const f = el("div", "fila");
     const barra = el("div", "barra");
     const s = el("span"); s.style.width = `${100 * p.v / tope}%`; s.style.background = color(p.f);
     barra.appendChild(s);
     const esc = el("div", "esc", String(p.e));
     esc.append(" ", el("small", null, "esc."));
+    if (vivo && comparables.has(p.f)) {
+      const d = p.e - (antes[p.f] || 0);
+      esc.append(" ", el("small", d > 0 ? "sube" : d < 0 ? "baja" : null, d > 0 ? `▲${d}` : d < 0 ? `▼${-d}` : "="));
+    }
     f.append(el("div", null, p.s), barra,
              el("div", "cifras", `${num(p.v)} · ${dec(100 * p.v / a.validos, 2)} %`), esc);
     lista.appendChild(f);
   });
-  const mostrados = a.partidos.slice(0, 12);
+  const mostrados = filas.slice(0, vivo ? 16 : 12);
   const resto = a.validos - mostrados.reduce((t, p) => t + p.v, 0) - a.blancos;
-  $("#otros").textContent =
-    `Resto de candidaturas: ${num(resto)} votos · en blanco: ${num(a.blancos)} (${dec(100 * a.blancos / a.validos, 2)} % de los válidos) · nulos: ${num(a.nulos)}.`;
+  $("#otros").textContent = !a.validos ? "" :
+    `Resto de candidaturas: ${num(resto)} votos · en blanco: ${num(a.blancos)} (${dec(100 * a.blancos / a.validos, 2)} % de los válidos) · nulos: ${num(a.nulos)}.` +
+    (vivo ? " ▲▼: diferencia de escaños con 2023 (PP se compara con PP + UPN; el espacio de Sumar concurre dividido y no se compara)." : "");
   const h = $("#historia");
   h.replaceChildren();
   DATOS.elecciones.forEach((x) => {
     const ambito = seleccion ? x.provincias[seleccion] : x.nacional;
     const g = ganador(ambito);
+    if (!g) return;
     const c = el("span", "chip" + (x.id === e.id ? " actual" : ""), `${x.id}: ${g.s}`);
     c.style.background = color(g.f);
     h.appendChild(c);
@@ -158,6 +268,7 @@ function cambiarVista(v) {
   document.querySelector(".rejilla").classList.toggle("vista-mun", v === "mun" || v === "sec");
   document.querySelector(".rejilla").classList.toggle("vista-sim", v === "sim");
   $("#bloque-sim").hidden = v !== "sim";
+  if (v !== "prov") { $("#hemiciclo").hidden = true; $("#aviso-prueba").hidden = true; }
   $("#aviso-sim").hidden = v !== "sim";
   $("#aviso-datos").hidden = v === "sim";
   $("#etq-eleccion").hidden = v === "sim";
@@ -168,10 +279,28 @@ function cambiarVista(v) {
   $("#bloque-mun").hidden = v !== "mun";
   $("#bloque-sec").hidden = v !== "sec";
   if (v === "sec" && !["2019a", "2019b", "2023"].includes($("#eleccion").value)) $("#eleccion").value = "2023";
+  if (v === "mun" && $("#eleccion").value === "2026") $("#eleccion").value = "2023";
   if (v === "sim") Simulador.iniciar().then(pintar);
   else if (v === "mun") Municipal.iniciar().then(pintar);
   else if (v === "sec") Seccion.iniciar().then(pintar);
   else pintar();
+}
+
+/* 29N: data/vivo_29n.json (pipeline/escrutinio_29n.py); con ?demo, el fichero de PRUEBA. Se vuelve a pedir cada 30 s. */
+async function cargarVivo(primera) {
+  try {
+    const r = await fetch(`data/${DEMO ? "demo" : "vivo"}_29n.json`, { cache: "no-store" });
+    if (!r.ok) return;
+    const e = await r.json();
+    const i = DATOS.elecciones.findIndex((x) => x.id === "2026");
+    if (i >= 0) DATOS.elecciones[i] = e; else DATOS.elecciones.push(e);
+    const sel = $("#eleccion");
+    if (primera) {
+      sel.appendChild(Object.assign(el("option"), { value: e.id, textContent: e.fecha }));
+      if (e.nacional.escrutado > 0) sel.value = e.id;
+    }
+    if (sel.value === "2026") pintar();
+  } catch (err) { /* sin HTTP (file://) o sin fichero: no hay 29N en el desplegable */ }
 }
 
 async function inicio() {
@@ -179,7 +308,12 @@ async function inicio() {
   const sel = $("#eleccion");
   DATOS.elecciones.forEach((e) => sel.appendChild(Object.assign(el("option"), { value: e.id, textContent: e.fecha })));
   sel.value = "2023";
-  sel.addEventListener("change", pintar);
+  sel.addEventListener("change", () => {
+    // El 29N solo existe, de momento, a nivel de España y provincias.
+    if (sel.value === "2026" && vista !== "prov" && vista !== "sim") cambiarVista("prov"); else pintar();
+  });
+  await cargarVivo(true);
+  setInterval(() => { if (sel.value === "2026" && !document.hidden) cargarVivo(false); }, 30000);
   $("#metrica").addEventListener("change", pintar);
   $("#volver").addEventListener("click", () => { seleccion = null; Municipal.limpiar(); Seccion.limpiar(); Simulador.limpiar(); pintar(); });
   // El simulador no se enseña en abierto hasta que Jurídico confirme (LOREG art. 69.7): solo con ?simulador en la dirección.
