@@ -7,7 +7,8 @@ original. Léelo entero antes de tocar nada; después lee `CLAUDE.md` (hallazgos
 Estado: la web publicada tiene «29 de noviembre de 2026» en el desplegable (vacío hasta que haya datos), mapa de provincias,
 hemiciclo y simulador oculto (`?simulador`). Detalle de todo lo hecho ese día en `CLAUDE.md` (secciones fechadas 2026-11-15).
 Orden propuesto, con las fechas que mandan:
-1. **Lunes 16 — reconstruir la noche electoral de 2023 por municipio** (no depende de nadie). Con `tfm/db_tfm/db_municipios.parquet`
+1. **HECHO el lunes 16** (`pipeline/noche.py`; resultados en `CLAUDE.md`, «Proyección de la noche electoral»). Falta: enchufar `proyectar()` a los datos en vivo (base 2023 por municipio, censo `tab4`, mapa de candidaturas del 29N) y decidir cómo se enseña el margen. Planteamiento original:
+   **Reconstruir la noche electoral de 2023 por municipio** (no depende de nadie). Con `tfm/db_tfm/db_municipios.parquet`
    y `web/data/mun/`: simular que los municipios llegan en distintos órdenes (pequeños primero, al azar, por provincias) y medir el
    error de la proyección de escaños con el 5, 10, 30, 60 y 90 % escrutado. Proyección = comparar cada municipio escrutado con su
    2023 y extrapolar al resto, pesando con el censo del 29N (`data/ine/censo_electoral_29n/`, tab4). De ahí sale el margen que se
@@ -96,9 +97,10 @@ pipeline/
 web/                         sitio estático: index.html, estilo.css, app.js (provincias), municipios.js, secciones.js, data/
 data/web/                    clasificación de candidaturas de Mikel (usada para colorear partidos)
   convocatoria_29n.py        BOE → escaños por circunscripción y candidaturas proclamadas del 29N
+  noche.py                   proyección del resultado final con recuento parcial + backtest con recuentos simulados
   escrutinio_29n.py          lee la API de descargas de Interior (noche electoral) → web/data/vivo_29n.json
   simulador.py               ajuste territorial (IPF) + d'Hondt, backtest y web/data/simulador.json
-tests/                       98 tests (se saltan solos si faltan los datos; los del 29N y el simulador no)
+tests/                       104 tests (se saltan solos si faltan los datos; los del 29N y el simulador no)
 ```
 
 ## 6. Estado de la web (`web/`)
