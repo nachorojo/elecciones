@@ -25,6 +25,7 @@ const ETIQUETA = {
 const ESPACIO_2023 = { PP: "PP", UPN: "PP", PSOE: "PSOE", VOX: "VOX", ERC: "ERC", CIU_JXCAT: "JUNTS",
   EH_BILDU: "EH_BILDU", PNV: "PNV", BNG: "BNG", CC: "CC" };
 const DEMO = new URLSearchParams(location.search).has("demo");
+const CFG = Object.assign({ vivo: "data/vivo_29n.json", refresco: 30 }, window.CONFIG || {});
 
 const $ = (s) => document.querySelector(s);
 const num = (x) => Math.round(x).toLocaleString("es-ES", { useGrouping: "always" });
@@ -194,6 +195,7 @@ function pintarDetalle() {
     (vivo ? (a.escrutado > 0 ? ` · recuento provisional${e.hora ? ", actualizado a las " + e.hora : ""}`
                              : " · el escrutinio empieza a las 20:00") : "");
   $("#aviso-prueba").hidden = !(vivo && e.prueba);
+  $("#aviso-simulacro").hidden = !(vivo && e.simulacro);
   const hemi = $("#hemiciclo");
   hemi.replaceChildren();
   hemi.hidden = !!seleccion;
@@ -279,7 +281,7 @@ function cambiarVista(v) {
   document.querySelector(".rejilla").classList.toggle("vista-mun", v === "mun" || v === "sec");
   document.querySelector(".rejilla").classList.toggle("vista-sim", v === "sim");
   $("#bloque-sim").hidden = v !== "sim";
-  if (v !== "prov") { $("#hemiciclo").hidden = true; $("#aviso-prueba").hidden = true; }
+  if (v !== "prov") { $("#hemiciclo").hidden = true; $("#aviso-prueba").hidden = true; $("#aviso-simulacro").hidden = true; }
   $("#aviso-sim").hidden = v !== "sim";
   $("#aviso-datos").hidden = v === "sim";
   $("#etq-eleccion").hidden = v === "sim";
@@ -300,7 +302,7 @@ function cambiarVista(v) {
 /* 29N: data/vivo_29n.json (pipeline/escrutinio_29n.py); con ?demo, el fichero de PRUEBA. Se vuelve a pedir cada 30 s. */
 async function cargarVivo(primera) {
   try {
-    const r = await fetch(`data/${DEMO ? "demo" : "vivo"}_29n.json`, { cache: "no-store" });
+    const r = await fetch(DEMO ? "data/demo_29n.json" : CFG.vivo, { cache: "no-store" });
     if (!r.ok) return;
     const e = await r.json();
     const i = DATOS.elecciones.findIndex((x) => x.id === "2026");
@@ -324,7 +326,7 @@ async function inicio() {
     if (sel.value === "2026" && vista !== "prov" && vista !== "sim") cambiarVista("prov"); else pintar();
   });
   await cargarVivo(true);
-  setInterval(() => { if (sel.value === "2026" && !document.hidden) cargarVivo(false); }, 30000);
+  setInterval(() => { if (sel.value === "2026" && !document.hidden) cargarVivo(false); }, 1000 * Math.max(10, CFG.refresco));
   $("#metrica").addEventListener("change", pintar);
   $("#volver").addEventListener("click", () => { seleccion = null; Municipal.limpiar(); Seccion.limpiar(); Simulador.limpiar(); pintar(); });
   // El simulador no se enseña en abierto hasta que Jurídico confirme (LOREG art. 69.7): solo con ?simulador en la dirección.

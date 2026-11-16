@@ -42,6 +42,12 @@ CAMPOS = [("fecha", 10), ("tipo", 2), ("ccaa", 2), ("prov", 2), ("fijo", 1), ("n
           ("abstencion", 8), ("pct_abstencion", 5), ("blancos", 8), ("pct_blancos", 5), ("nulos", 8),
           ("pct_nulos", 5), ("diputados", 3), ("cod_ultima", 4), ("cod_proxima", 4), ("votos_faltan", 8)]
 CAND = [("c", 4), ("s", 55), ("v", 8), ("pct", 5), ("e", 3)]
+# Campos fijos de getEscrutinioMunicipios. Después, 80 × (código, siglas, votos, porcentaje): sin diputados.
+CAMPOS_MUN = [("fecha", 10), ("ccaa", 2), ("prov", 2), ("fijo", 1), ("mun", 3), ("distrito", 2), ("nombre", 50),
+              ("fijo2", 2), ("fijo3", 2), ("mesas", 5), ("censo", 8), ("censo_escrutado", 8), ("pct_escrutado", 5),
+              ("votantes", 8), ("pct_votantes", 5), ("abstencion", 8), ("pct_abstencion", 5), ("blancos", 8),
+              ("pct_blancos", 5), ("nulos", 8), ("pct_nulos", 5)]
+CAND_MUN = 4
 
 
 def _entero(x: str) -> int:
@@ -94,6 +100,50 @@ def escribir_totales(registros: list[dict]) -> str:
     return "\r\n".join(lineas) + "\r\n"
 
 
+def leer_municipios(texto: str) -> list[dict]:
+    """Registros de getEscrutinioMunicipios de una provincia: municipios (distrito «99») y distritos de las
+    siete grandes ciudades (distrito distinto de «99»; sus votos ya están incluidos en el registro del municipio)."""
+    out = []
+    n_fijos = len(CAMPOS_MUN)
+    for linea in texto.splitlines():
+        if not linea.strip():
+            continue
+        f = linea.split(";")
+        if len(f) < n_fijos + N_CAND * CAND_MUN:
+            raise ValueError(f"Registro municipal con {len(f)} campos; se esperaban {n_fijos + N_CAND * CAND_MUN}")
+        r = {n: f[i].strip() for i, (n, _) in enumerate(CAMPOS_MUN)}
+        for n in ("mesas", "censo", "censo_escrutado", "votantes", "abstencion", "blancos", "nulos"):
+            r[n] = _entero(r[n])
+        for n in ("pct_escrutado", "pct_votantes", "pct_abstencion", "pct_blancos", "pct_nulos"):
+            r[n] = _entero(r[n]) / 100
+        r["id"] = r["prov"] + r["mun"]
+        r["partidos"] = []
+        for k in range(N_CAND):
+            c, s, v, _ = f[n_fijos + k * CAND_MUN: n_fijos + (k + 1) * CAND_MUN]
+            if s.strip() and _entero(c):
+                r["partidos"].append({"c": c.strip(), "s": s.strip(), "v": _entero(v)})
+        out.append(r)
+    return out
+
+
+def escribir_municipios(registros: list[dict]) -> str:
+    """Inverso de `leer_municipios` (para pruebas)."""
+    lineas = []
+    for r in registros:
+        f = []
+        for n, lon in CAMPOS_MUN:
+            v = r.get(n, "9" if n == "fijo" else "99" if n in ("fijo2", "fijo3", "distrito") else "")
+            if n.startswith("pct_"):
+                v = round(float(v or 0) * 100)
+            f.append(str(v).ljust(lon) if n == "nombre" else str(v).rjust(lon, "0"))
+        for k in range(N_CAND):
+            p = r["partidos"][k] if k < len(r["partidos"]) else None
+            f += [p["c"].rjust(4, "0"), p["s"].ljust(55), str(p["v"]).rjust(8, "0"), "0" * 5] if p \
+                else ["0000", " " * 55, "0" * 8, "0" * 5]
+        lineas.append(";".join(f))
+    return "\r\n".join(lineas) + "\r\n"
+
+
 def _hora(fecha: str) -> str:
     """'2611292114' (YYMMddHHmm) -> '21:14'."""
     return f"{fecha[6:8]}:{fecha[8:10]}" if len(fecha) == 10 and fecha.isdigit() else ""
@@ -117,14 +167,15 @@ def _nombres() -> dict[str, tuple[str, int]]:
         return {r["provincia"]: (r["nombre"], int(r["escanos_29n"])) for r in csv.DictReader(fh)}
 
 
-def a_web(registros: list[dict], prueba: bool = False) -> dict:
+def a_web(registros: list[dict], prueba: bool = False, simulacro: bool = False) -> dict:
     """Elección «2026» con la forma de resultados.json. Avisa si los escaños no cuadran con el BOE."""
     ref = _nombres()
     nacional = next(r for r in registros if r["tipo"] == "TO")
     provincias = {r["prov"]: _ambito(r, ref[r["prov"]][0]) for r in registros if r["tipo"] == "PR"}
     avisos = [f"{p}: {a['escanos_total']} diputados en el fichero, {ref[p][1]} en el BOE"
               for p, a in provincias.items() if a["escanos_total"] != ref[p][1]]
-    return {"id": "2026", "fecha": FECHA, "hora": _hora(nacional["fecha"]), "prueba": prueba, "avisos": avisos,
+    return {"id": "2026", "fecha": FECHA, "hora": _hora(nacional["fecha"]), "prueba": prueba, "simulacro": simulacro,
+            "avisos": avisos,
             "nacional": _ambito(nacional, "España"), "provincias": dict(sorted(provincias.items()))}
 
 
@@ -179,18 +230,55 @@ def demo(escrutado: float = 0.62) -> str:
     return escribir_totales([nac] + regs)
 
 
-def descargar() -> str:
-    """Último envío del Congreso: getEnvio/2 y getEscrutinioTotales/2/{numEnv}. Sin probar (ver cabecera)."""
-    base = os.environ["ELECCIONES_API_URL"].rstrip("/")
-    cred = base64.b64encode(f"{os.environ['ELECCIONES_API_USER']}:{os.environ['ELECCIONES_API_PASS']}".encode()).decode()
+class Cliente:
+    """Peticiones GET a la API de descargas. Dominio y credenciales, por variables de entorno:
+    ELECCIONES_API_URL, ELECCIONES_API_USER, ELECCIONES_API_PASS. El manual no dice cómo se autentica:
+    se supone autenticación HTTP básica (ELECCIONES_API_AUTH=basic, por defecto); con «ninguna» no se
+    envía cabecera. SIN PROBAR contra el servicio real."""
 
-    def pedir(ruta: str) -> str:
-        req = urllib.request.Request(base + ruta, headers={"Authorization": "Basic " + cred})
+    def __init__(self, base: str | None = None, usuario: str | None = None, clave: str | None = None):
+        self.base = (base or os.environ["ELECCIONES_API_URL"]).rstrip("/")
+        usuario = usuario or os.environ.get("ELECCIONES_API_USER", "")
+        clave = clave or os.environ.get("ELECCIONES_API_PASS", "")
+        self.cabeceras = {}
+        if usuario and os.environ.get("ELECCIONES_API_AUTH", "basic") == "basic":
+            self.cabeceras["Authorization"] = "Basic " + base64.b64encode(f"{usuario}:{clave}".encode()).decode()
+
+    def pedir(self, ruta: str) -> bytes:
+        req = urllib.request.Request(self.base + ruta, headers=self.cabeceras)
         with urllib.request.urlopen(req, timeout=60) as r:
-            return r.read().decode("utf-8", errors="replace")
+            return r.read()
 
-    envio = pedir("/descargas/csv/data/getEnvio/2").strip()
-    return pedir(f"/descargas/csv/data/getEscrutinioTotales/2/{envio}")
+    def envio(self) -> str:
+        """Número del último envío del Congreso (se toma el primer número de la respuesta)."""
+        import re
+        m = re.search(r"\d+", self.pedir("/descargas/csv/data/getEnvio/2").decode("utf-8", errors="replace"))
+        if not m:
+            raise ValueError("getEnvio/2 no ha devuelto ningún número de envío")
+        return m.group(0)
+
+    def totales(self, envio: str) -> bytes:
+        return self.pedir(f"/descargas/csv/data/getEscrutinioTotales/2/{envio}")
+
+    def municipios(self, prov: str, envio: str) -> bytes:
+        return self.pedir(f"/descargas/csv/data/getEscrutinioMunicipios/2/{prov}/{envio}")
+
+    def avances(self, envio: str) -> bytes:
+        return self.pedir(f"/descargas/csv/data/getAvancesTotales/2/{envio}")
+
+
+def texto(datos: bytes) -> str:
+    """Los ficheros no declaran codificación: se intenta UTF-8 y, si no, Latin-1 (la de los ficheros de Interior)."""
+    try:
+        return datos.decode("utf-8")
+    except UnicodeDecodeError:
+        return datos.decode("latin-1")
+
+
+def descargar() -> str:
+    """Último envío del Congreso: getEnvio/2 y getEscrutinioTotales/2/{numEnv}."""
+    c = Cliente()
+    return texto(c.totales(c.envio()))
 
 
 def guardar(datos: dict, salida: Path) -> Path:

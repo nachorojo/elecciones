@@ -13,6 +13,10 @@ Orden propuesto, con las fechas que mandan:
    error de la proyección de escaños con el 5, 10, 30, 60 y 90 % escrutado. Proyección = comparar cada municipio escrutado con su
    2023 y extrapolar al resto, pesando con el censo del 29N (`data/ine/censo_electoral_29n/`, tab4). De ahí sale el margen que se
    enseñará. Método de referencia: repetir el perfil relativo anterior (ver «Revisión del TFM» en `CLAUDE.md`).
+   **Martes 17, en el PC con las credenciales** (PowerShell, desde una copia de la repo FUERA de OneDrive):
+   `$env:ELECCIONES_API_URL="https://..."`, `$env:ELECCIONES_API_USER="..."`, `$env:ELECCIONES_API_PASS="..."` y después
+   `python -m pipeline.captura_29n --una-vez --simulacro`. Si da error de autenticación, pegar el mensaje (sin la clave).
+   **Miércoles 18, 14:55:** `python -m pipeline.captura_29n --simulacro --publicar` y dejarlo abierto hasta el final.
 2. **Martes 17 — llegan URL y credenciales de la API de Interior.** Probar `pipeline/escrutinio_29n.py --descargar` (la
    autenticación básica es una suposición), bajar los ficheros fijos (`getCandidaturas`, resultados de 2023 por municipio) y
    mapear códigos de candidatura. Añadir el lector de `getEscrutinioMunicipios`. Las credenciales NUNCA van a la repo.
@@ -97,10 +101,12 @@ pipeline/
 web/                         sitio estático: index.html, estilo.css, app.js (provincias), municipios.js, secciones.js, data/
 data/web/                    clasificación de candidaturas de Mikel (usada para colorear partidos)
   convocatoria_29n.py        BOE → escaños por circunscripción y candidaturas proclamadas del 29N
+  captura_29n.py             bucle de captura de envíos de Interior (guarda, actualiza la web, proyecta)
+  proyeccion_29n.py          base del 29N por municipio + proyección a partir del recuento municipal
   noche.py                   proyección del resultado final con recuento parcial + backtest con recuentos simulados
   escrutinio_29n.py          lee la API de descargas de Interior (noche electoral) → web/data/vivo_29n.json
   simulador.py               ajuste territorial (IPF) + d'Hondt, backtest y web/data/simulador.json
-tests/                       104 tests (se saltan solos si faltan los datos; los del 29N y el simulador no)
+tests/                       108 tests (se saltan solos si faltan los datos; los del 29N y el simulador no)
 ```
 
 ## 6. Estado de la web (`web/`)
