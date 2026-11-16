@@ -241,9 +241,24 @@ const Simulador = (() => {
     if (!D) return;
     if (!res) res = MotorSim.simular(D, pct);
     const s = suma();
+    // Las candidaturas de la lista no suman 100: falta el voto en blanco y el de las candidaturas menores
+    // (2,7 % en 2023). Se enseña como una fila más, calculada, para que el total sea siempre 100, y se avisa
+    // cuando ese resto no es creíble.
+    const resto = 100 - s;
+    const ref = 100 - D.espacios.reduce((a, e) => a + e.inicio, 0);
     const linea = $("#sim-suma");
-    linea.textContent = `Suma de las candidaturas: ${dec(s, 1)} % · resto y voto en blanco: ${dec(Math.max(0, 100 - s), 1)} %`;
-    linea.classList.toggle("sim-exceso", s > 100.0001);
+    linea.replaceChildren();
+    const fila = el("span", "sim-total");
+    fila.append(el("span", null, "Otras candidaturas y voto en blanco (lo que falta hasta 100)"),
+                el("b", null, dec(Math.max(0, resto), 1) + " %"));
+    const total = el("span", "sim-total");
+    total.append(el("span", null, "Total"), el("b", null, dec(Math.max(100, s), 1) + " %"));
+    linea.append(fila, total);
+    let aviso = "";
+    if (resto < -0.0001) aviso = `Te pasas de 100 en ${dec(-resto, 1)} puntos: baja alguna candidatura. Mientras tanto, el reparto se calcula reescalando todas en proporción.`;
+    else if (resto < 1) aviso = `Casi no queda sitio para el voto en blanco y las candidaturas menores (${dec(resto, 1)} %; en 2023 sumaron ${dec(ref, 1)} %). El escenario es poco realista.`;
+    else if (resto > ref + 3) aviso = `Quedan ${dec(resto, 1)} puntos sin asignar a ninguna candidatura de la lista (en 2023 fueron ${dec(ref, 1)}). Sube alguna candidatura o da por bueno que ese voto va a candidaturas menores sin escaño.`;
+    if (aviso) linea.append(el("span", "sim-exceso", aviso));
     pintarMosaico();
     pintarDetalle();
   }

@@ -123,7 +123,10 @@ button.secundario {
 .sim-detalle summary { cursor: pointer; font-size: 13px; color: var(--texto-tenue); margin-bottom: 6px; }
 .sim-detalle .sim-fila { grid-template-columns: 1fr 92px; }
 .sim-suma { margin: 12px 0 10px; font-variant-numeric: tabular-nums; }
-.sim-exceso { color: var(--aviso); font-weight: 600; }
+.sim-total { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
+.sim-total b { color: var(--texto); white-space: nowrap; }
+.sim-total + .sim-total { border-top: 1px solid var(--borde); margin-top: 3px; padding-top: 6px; }
+.sim-exceso { display: block; margin-top: 8px; padding: 8px 10px; border-radius: 8px; color: var(--aviso); background: var(--aviso-fondo); font-weight: 600; }
 @media (max-width: 520px) { .vista { padding: 8px 10px; font-size: 13px; } .sim-fila { grid-template-columns: 1fr 92px; } .sim-fila input[type="range"] { grid-column: 1 / -1; grid-row: 2; } }
 .hemiciclo { max-width: 380px; margin: 0 auto 14px; }
 .hemiciclo svg { display: block; width: 100%; height: auto; }
