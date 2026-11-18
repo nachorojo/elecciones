@@ -86,7 +86,8 @@ def capturar(cliente, envio: str, carpeta: Path, provincias: list[str], base: di
                 registros += E.leer_municipios(E.texto(datos))
             except ValueError as e:
                 fallos.append(f"municipios_{p}.csv: {e}")
-    if registros and base is not None:
+    # Sin nada escrutado no hay nada que proyectar (saldría la base de 2023 tal cual, que no es una estimación).
+    if base is not None and any(r["censo_escrutado"] > 0 for r in registros):
         proy = P.proyectar_registros(registros, base) | {"envio": envio, "capturado": resumen["capturado"]}
         (destino / "proyeccion.json").write_text(json.dumps(proy, ensure_ascii=False, indent=1), encoding="utf-8")
         resumen |= {"proyeccion": proy["nacional"]["escanos"], "margen": proy["margen"]["escanos_media"],
