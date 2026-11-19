@@ -3,30 +3,59 @@
 Escrito el 2026-10-23 para retomar el trabajo desde otro PC **solo con GitHub** y sin acceso a la conversación
 original. Léelo entero antes de tocar nada; después lee `CLAUDE.md` (hallazgos y decisiones, más largo).
 
-## 0. Por dónde seguir (escrito el 2026-11-15 por la noche)
-Estado: la web publicada tiene «29 de noviembre de 2026» en el desplegable (vacío hasta que haya datos), mapa de provincias,
-hemiciclo y simulador oculto (`?simulador`). Detalle de todo lo hecho ese día en `CLAUDE.md` (secciones fechadas 2026-11-15).
-Orden propuesto, con las fechas que mandan:
-1. **HECHO el lunes 16** (`pipeline/noche.py`; resultados en `CLAUDE.md`, «Proyección de la noche electoral»). Falta: enchufar `proyectar()` a los datos en vivo (base 2023 por municipio, censo `tab4`, mapa de candidaturas del 29N) y decidir cómo se enseña el margen. Planteamiento original:
-   **Reconstruir la noche electoral de 2023 por municipio** (no depende de nadie). Con `tfm/db_tfm/db_municipios.parquet`
-   y `web/data/mun/`: simular que los municipios llegan en distintos órdenes (pequeños primero, al azar, por provincias) y medir el
-   error de la proyección de escaños con el 5, 10, 30, 60 y 90 % escrutado. Proyección = comparar cada municipio escrutado con su
-   2023 y extrapolar al resto, pesando con el censo del 29N (`data/ine/censo_electoral_29n/`, tab4). De ahí sale el margen que se
-   enseñará. Método de referencia: repetir el perfil relativo anterior (ver «Revisión del TFM» en `CLAUDE.md`).
-   **Martes 17, en el PC con las credenciales** (PowerShell, desde una copia de la repo FUERA de OneDrive):
-   `$env:ELECCIONES_API_URL="https://..."`, `$env:ELECCIONES_API_USER="..."`, `$env:ELECCIONES_API_PASS="..."` y después
-   `python -m pipeline.captura_29n --una-vez --simulacro`. Si da error de autenticación, pegar el mensaje (sin la clave).
-   **Miércoles 18, 14:55:** `python -m pipeline.captura_29n --simulacro --publicar` y dejarlo abierto hasta el final.
-2. **Martes 17 — llegan URL y credenciales de la API de Interior.** Probar `pipeline/escrutinio_29n.py --descargar` (la
-   autenticación básica es una suposición), bajar los ficheros fijos (`getCandidaturas`, resultados de 2023 por municipio) y
-   mapear códigos de candidatura. Añadir el lector de `getEscrutinioMunicipios`. Las credenciales NUNCA van a la repo.
-3. **Miércoles 18, 15:00–18:00 — simulacro de Interior.** Grabar todos los envíos (totales y municipios) con su hora. Rotular la
-   página como «SIMULACRO» mientras dure. Decidir antes desde dónde se descarga y cómo se publica cada pocos minutos (la web de
-   Netlify es estática y no puede guardar credenciales).
-4. **Antes del 24 de noviembre:** respuesta de Jurídico sobre simulador y proyección (LOREG 69.7); validar con Redacción la
-   agrupación de candidaturas; decidir si la proyección se enseña en la web o solo se usa en antena.
-5. **Si sobra tiempo:** perfil territorial de SALF y reparto Frente Amplio/Podemos con las Europeas 2024 (hay que bajar el zip de
-   Interior desde el PC: desde la nube Interior devuelve 403); nivel municipal en vivo en la web.
+## 0. Día 29 de noviembre: lista de comprobación (escrita el 2026-11-19)
+Estado: todo lo necesario para la jornada está hecho y probado contra el servicio real de Interior (simulacro del 18-N y
+pasada de comprobación del 19-N). Detalle en `CLAUDE.md`, secciones fechadas del 15 al 19 de noviembre.
+
+**Qué hace falta ese día:** un PC con la repo, Python y `git push` sin contraseña, encendido y sin suspensión de las 14:00
+hasta pasada la medianoche, y alguien que mire la ventana de vez en cuando. Un solo PC capturando: dos a la vez chocan al publicar.
+
+### La víspera (sábado 28)
+1. En PowerShell, dentro de la carpeta `repo` (no en la de arriba):
+   `git pull`
+2. `pip install -r requirements.txt`
+3. `python -m pytest tests/test_captura_29n.py tests/test_escrutinio_29n.py -q` → debe acabar en `16 passed`.
+4. Comprobar que la página del 29N está vacía (0 % escrutado, sin rótulo de simulacro). Si no lo está:
+   `python -m pipeline.escrutinio_29n --vacio`, y después `git add web/data/vivo_29n.json`, `git commit -m "29N: página vacía"`, `git push`.
+5. Quitar la suspensión automática del PC para el domingo.
+
+### El domingo 29, a media mañana (antes de las 13:30)
+6. Abrir PowerShell en `repo` y poner las tres variables, **con comillas simples** y con los datos del correo de Interior:
+   `$env:ELECCIONES_API_URL='https://prensa.29neleccionesgenerales.es'`
+   `$env:ELECCIONES_API_USER='...'`
+   `$env:ELECCIONES_API_PASS='...'`
+   Viven solo en esa ventana: todo lo demás hay que lanzarlo en ella. No escribirlas en ningún fichero.
+7. Comprobar la identificación (copiar tal cual, sin sustituir nada; debe imprimir `200`):
+   `curl.exe -s -o NUL -w "%{http_code}" -u "$($env:ELECCIONES_API_USER):$($env:ELECCIONES_API_PASS)" "$env:ELECCIONES_API_URL/descargas/csv/data/getEnvio/2"`
+   Si sale `401`: reescribir usuario y clave (longitudes con `echo ($env:ELECCIONES_API_USER.Length) ($env:ELECCIONES_API_PASS.Length)`)
+   y probar la misma clave en el navegador. Si tampoco entra ahí, llamar a Interior.
+8. `git push --dry-run` → no debe pedir usuario ni contraseña.
+
+### A las 13:45: lanzar la captura (SIN `--simulacro`)
+9. `python -m pipeline.captura_29n --publicar`
+   Escribe una línea por cada envío nuevo. Hasta las 20:00 la página muestra mesas constituidas y los avances de participación
+   (14:00 y 18:00); desde las 20:00, el escrutinio. La proyección sale en esa línea y se guarda en la carpeta de cada envío: no se publica.
+10. No cerrar la ventana. No abrir `registro.csv` con Excel mientras esté en marcha (lo bloquea): usar el Bloc de notas o una copia.
+
+### Si algo va mal
+- **La ventana se ha cerrado o el programa se ha parado:** repetir los pasos 6 y 9. Retoma desde el envío que haya en ese momento.
+- **Aparece «no se pudo publicar»:** la captura sigue guardando; la web se queda en el último envío publicado. Probar `git pull` en otra
+  ventana y esperar al siguiente envío. Nadie más debe subir cambios a la rama `claude/blissful-dirac-j8h7p9` durante la jornada.
+- **Aparece «el recuento retrocede»:** Interior ha mandado un envío incompleto; no se publica y se espera al siguiente. No hay que hacer nada.
+- **La página no cambia aunque la captura sí escribe líneas:** mirar en el panel de Netlify si los despliegues fallan o hay un límite alcanzado.
+- **El PC muere:** en otro equipo, `git clone`, pasos 1–3 y 6–9. Tenerlo preparado de antemano, pero sin lanzar la captura.
+
+### Después
+- Parar con Ctrl+C cuando el escrutinio esté cerca del 100 % y deje de cambiar.
+- Los ficheros de Interior quedan en `datos\29n_envios\` (comprimidos, unos pocos MB por envío): con ellos se puede repetir la proyección
+  envío a envío (`python -m pipeline.captura_29n --repetir CARPETA`) y, por primera vez, medirla contra un recuento real.
+- El resultado de la noche no incluye el voto exterior (CERA), que se cuenta días después y puede mover algún escaño.
+
+### Pendiente antes del 29 (no técnico)
+- Jurídico: si el simulador (`?simulador`) y la proyección pueden enseñarse, y cuándo (LOREG 69.7; veda desde el 24 de noviembre).
+- Redacción: validar la agrupación de candidaturas en espacios (`data/web/29n/candidaturas_congreso.csv` y `candidaturas_api_2026.csv`).
+- Confirmar con Interior que la URL y la clave del simulacro son las del día 29.
+- Si Netlify limita los despliegues: publicar como mucho uno cada cinco minutos, o pasar el fichero a un almacén externo (`web/config.js`).
 
 ## 1. Qué es el proyecto
 Web para ondacero.es con datos de las elecciones generales 1996–2023 y, más adelante, simulador/predictor para el
