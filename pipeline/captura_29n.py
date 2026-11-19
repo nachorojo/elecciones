@@ -89,6 +89,8 @@ def capturar(cliente, envio: str, carpeta: Path, provincias: list[str], base: di
             fallos.append(f"totales.csv: el recuento retrocede ({previo} % -> {n['escrutado']} %); no se publica")
         else:
             E.guardar(web, salida_web)
+            # Resumen para terceros (pantallas en la calle), junto al fichero de la web y con los mismos datos.
+            E.guardar_pantallas(web, envio, salida_web.with_name("pantallas_29n.json"))
         resumen |= {"hora_interior": web["hora"], "escrutado": n["escrutado"],
                     "escanos": {p["s"]: p["e"] for p in n["partidos"] if p["e"]}, "avisos": web["avisos"]}
     registros = []
@@ -119,8 +121,10 @@ def _escrutado_publicado(fichero: Path, simulacro: bool) -> float:
 
 
 def publicar(fichero: Path, mensaje: str) -> str:
-    """git add + commit + push del fichero de la web. Devuelve el error, o cadena vacía si fue bien."""
-    for orden in (["git", "add", str(fichero)], ["git", "commit", "-q", "-m", mensaje], ["git", "push", "-q"]):
+    """git add + commit + push del fichero de la web y del resumen para pantallas. Devuelve el error, o cadena vacía."""
+    ficheros = [str(fichero)] + [str(f) for f in (fichero.with_name("pantallas_29n.json"), fichero.with_name("pantallas_29n.csv"))
+                                 if f.exists()]
+    for orden in (["git", "add", *ficheros], ["git", "commit", "-q", "-m", mensaje], ["git", "push", "-q"]):
         r = subprocess.run(orden, cwd=C.REPO, capture_output=True, text=True)
         if r.returncode != 0 and "nothing to commit" not in (r.stdout + r.stderr):
             return f"{' '.join(orden[:2])}: {(r.stderr or r.stdout).strip()[:200]}"

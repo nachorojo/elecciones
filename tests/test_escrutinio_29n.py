@@ -129,3 +129,22 @@ def test_fichero_del_simulacro_para_la_web_al_dia():
     """web/data/simulacro_29n.json (se ve con ?simulacro) sale de los ficheros reales y va rotulado."""
     web = json.loads(E.SIMULACRO.read_text(encoding="utf-8"))
     assert web == json.loads(json.dumps(E.simulacro_web())) and web["simulacro"] is True
+
+
+def test_resumen_para_pantallas():
+    """Fichero mínimo para el proveedor de pantallas: mismas cifras que la web, pocas y con nombres legibles."""
+    web = E.simulacro_web()
+    d = E.pantallas(web, "130")
+    assert (d["fase"], d["escrutado_pct"], d["participacion_pct"], d["mayoria_absoluta"], d["envio"]) == ("escrutinio", 98.54, 69.66, 176, "130")
+    assert d["avances"] == [{"hora": "14:00", "participacion_pct": 40.4}, {"hora": "18:00", "participacion_pct": 53.1}]
+    assert d["mesas"] == {"total": 61033, "constituidas": 61033, "suspendidas": 0}
+    pp = d["partidos"][0]
+    assert (pp["id"], pp["nombre"], pp["escanos"], pp["escanos_2023"], pp["porcentaje"]) == ("PP", "PP", 137, 138, 33.42)
+    assert sum(p["escanos"] for p in d["partidos"]) == 350
+    assert next(p for p in d["partidos"] if p["id"] == "FA")["escanos_2023"] is None       # sin comparación directa
+    csv_ = E.pantallas_csv(d).splitlines()
+    assert csv_[0] == "tipo;id;nombre;escanos;votos;porcentaje;escanos_2023" and "partido;PP;PP;137;8168128;33.42;138" in csv_
+    antes = E.pantallas(E.vacio())
+    assert antes["fase"] == "previa" and antes["partidos"] == [] and antes["participacion_pct"] is None
+    assert json.loads(E.PANTALLAS_EJEMPLO.read_text(encoding="utf-8")) == json.loads(json.dumps(d))
+    assert json.loads(E.PANTALLAS.read_text(encoding="utf-8")) == json.loads(json.dumps(antes))
