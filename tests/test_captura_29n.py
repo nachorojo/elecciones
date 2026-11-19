@@ -117,6 +117,11 @@ def test_captura_de_un_envio_guardado(base, tmp_path):
     assert mal(rec) >= 8 and mal(proy["nacional"]["escanos"]) <= 5
     for esp in ("FA", "PODEMOS", "SALF"):                     # los tres espacios sin base salen proyectados
         assert proy["nacional"]["pct"][esp] > 2
+    # La misma proyección se deja junto al fichero de la web (página oculta), con el recuento del envío para comparar.
+    pub = json.loads((tmp_path / "proyeccion_29n.json").read_text(encoding="utf-8"))
+    assert pub["nacional"] == proy["nacional"] and pub["envio"] == "7" and pub["simulacro"] is True
+    assert sum(pub["recuento"]["nacional"].values()) == 350 and pub["recuento"]["nacional"] == rec
+    assert len(pub["recuento"]["provincias"]) == 52 and pub["nombres"]["28"] == "Madrid"
 
 
 def test_margen_segun_lo_escrutado():

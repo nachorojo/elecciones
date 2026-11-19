@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>29N · Proyección (uso interno)</title>
+<!-- Página OCULTA: no está enlazada desde la web. Muestra la proyección propia del resultado final que calcula
+     pipeline/captura_29n.py con cada envío (web/data/proyeccion_29n.json). Con ?datos=ejemplo, datos de PRUEBA. -->
+<link rel="stylesheet" href="estilo.css">
+<style>
+  .desliza { overflow-x: auto; }
+  .tarjeta { min-width: 0; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  @media (max-width: 520px) { th, td { padding: 8px 6px; font-size: 13px; } td.p { font-size: 17px; } }
+  th, td { padding: 9px 10px; text-align: right; border-bottom: 1px solid var(--borde); }
+  th { font-size: 12.5px; color: var(--texto-tenue); font-weight: 600; }
+  th:first-child, td:first-child { text-align: left; }
+  td.p { font-size: 20px; font-weight: 700; }
+  td i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 8px; }
+  .mas { color: #1a9b4b; font-weight: 700; } .menos { color: #d63a35; font-weight: 700; }
+  .margen { font-size: 15px; }
+  .prov { display: flex; flex-wrap: wrap; gap: 8px; }
+  .prov span { background: var(--superficie-alta); border-radius: 9px; padding: 6px 11px; font-size: 13.5px; }
+</style>
+</head>
+<body>
+<header class="cabecera">
+  <div class="marca"><div class="logo" aria-hidden="true"></div>
+    <div><h1>Proyección del resultado final · 29N</h1><p>Estimación propia a partir del recuento parcial · uso interno</p></div></div>
+  <span class="insignia" id="estado">Cargando…</span>
+</header>
+<main>
+  <p id="prueba" class="aviso" hidden><strong>DATOS DE PRUEBA.</strong> Noche ficticia para enseñar cómo se ve la página; no son resultados ni una estimación.</p>
+  <p id="simulacro" class="aviso" hidden><strong>SIMULACRO.</strong> Datos ficticios del ensayo técnico de Interior.</p>
+  <div class="rejilla vista-sim">
+    <section class="tarjeta">
+      <h2>España: recuento frente a proyección</h2>
+      <p class="nota" id="cuando"></p>
+      <div class="desliza"><table>
+        <thead><tr><th>Candidatura</th><th>Recuento ahora</th><th>Proyección final</th><th>Diferencia</th><th>% de voto proyectado</th></tr></thead>
+        <tbody id="tabla"></tbody>
+      </table></div>
+    </section>
+    <section class="tarjeta">
+      <h2>Cuánto fiarse</h2>
+      <p class="margen" id="margen"></p>
+      <p class="nota">El margen sale de reconstruir las noches de abril de 2019, noviembre de 2019 y 2023 con órdenes de llegada
+        simulados. Si dentro de cada municipio llegan antes las mesas de un signo político, el error real puede ser bastante mayor.
+        No incluye el voto exterior, que se cuenta días después.</p>
+      <h3>Provincias donde la proyección no coincide con el recuento</h3>
+      <div class="prov" id="provincias"></div>
+    </section>
+  </div>
+  <section class="aviso"><strong>No es un dato oficial.</strong> El recuento es del Ministerio del Interior; la proyección es un
+    cálculo propio: compara lo ya contado en cada municipio con su resultado de 2023 y aplica ese cambio a lo que falta.
+    Las candidaturas sin historia (Se Acabó la Fiesta, Podemos y Frente Amplio por separado) se proyectan con su porcentaje en lo contado.</section>
+</main>
+<script>
+const NOMBRE = { PP: "PP", PSOE: "PSOE", VOX: "Vox", FA: "Frente Amplio", PODEMOS: "Podemos", SALF: "Se Acabó la Fiesta", ERC: "ERC",
+  JUNTS: "Junts", EH_BILDU: "EH Bildu", PNV: "PNV", BNG: "BNG", CC: "Coalición Canaria", COMPROMIS: "Compromís",
+  NC: "NC-Podemos-IU-Sumar", ADELANTE: "Adelante Andalucía", TERUEL_EXISTE: "Teruel Existe", GBAI: "Geroa Bai", PACMA: "PACMA", OTROS: "Otras" };
+const COLOR = { PP: "#1D84CE", PSOE: "#E30713", VOX: "#5BA82B", FA: "#E51C55", PODEMOS: "#6B2E7A", SALF: "#7A5230", ERC: "#E0A020",
+  JUNTS: "#00A99D", EH_BILDU: "#7BA21A", PNV: "#0F6B3C", BNG: "#5F93C0", CC: "#C9A400", COMPROMIS: "#D96A2B", NC: "#3C8D5A",
+  ADELANTE: "#2AA198", TERUEL_EXISTE: "#4B6B4F", GBAI: "#B0333A", PACMA: "#9BB52B" };
+const $ = (s) => document.querySelector(s);
+const el = (t, c, x) => { const n = document.createElement(t); if (c) n.className = c; if (x !== undefined) n.textContent = x; return n; };
+const dec = (x, d = 1) => Number(x).toLocaleString("es-ES", { minimumFractionDigits: d, maximumFractionDigits: d });
+const dif = (d) => el("span", d > 0 ? "mas" : d < 0 ? "menos" : null, d > 0 ? "+" + d : d < 0 ? "−" + (-d) : "=");
+const ORIGEN = new URLSearchParams(location.search).get("datos") === "ejemplo" ? "data/proyeccion_ejemplo.json" : "data/proyeccion_29n.json";
+
+async function cargar() {
+  let d;
+  try { d = await (await fetch(ORIGEN, { cache: "no-store" })).json(); } catch (e) { $("#estado").textContent = "Sin datos"; return; }
+  $("#prueba").hidden = !d.prueba; $("#simulacro").hidden = !d.simulacro;
+  const tabla = $("#tabla"), provs = $("#provincias");
+  tabla.replaceChildren(); provs.replaceChildren();
+  if (!(d.escrutado > 0)) {
+    $("#estado").textContent = "Sin escrutinio todavía";
+    $("#cuando").textContent = "La proyección empieza a calcularse con el primer envío de escrutinio, a partir de las 20:00 del 29 de noviembre.";
+    $("#margen").textContent = "";
+    return;
+  }
+  $("#estado").textContent = `${dec(d.escrutado, 2)} % escrutado`;
+  $("#cuando").textContent = `Envío ${d.envio}${d.hora ? ", datos de Interior de las " + d.hora : ""}. Recibido el ${d.capturado}. ` +
+    `${d.municipios_con_recuento.toLocaleString("es-ES")} municipios con algún voto contado.`;
+  const proy = d.nacional.escanos, rec = (d.recuento || {}).nacional || {}, pct = d.nacional.pct;
+  const claves = [...new Set([...Object.keys(proy), ...Object.keys(rec)])].sort((a, b) => (proy[b] || 0) - (proy[a] || 0) || (rec[b] || 0) - (rec[a] || 0));
+  claves.forEach((k) => {
+    const tr = el("tr");
+    const n = el("td"); const i = el("i"); i.style.background = COLOR[k] || "#8D98A6"; n.append(i, NOMBRE[k] || k);
+    const t = el("td"); t.appendChild(dif((proy[k] || 0) - (rec[k] || 0)));
+    tr.append(n, el("td", null, String(rec[k] || 0)), el("td", "p", String(proy[k] || 0)), t, el("td", null, pct[k] !== undefined ? dec(pct[k], 1) + " %" : "—"));
+    tabla.appendChild(tr);
+  });
+  $("#margen").textContent = `Con el ${dec(d.escrutado, 1)} % escrutado, en las pruebas la proyección se quedó de media a ` +
+    `${dec(d.margen.escanos_media, 1)} escaños del reparto final, y a ${d.margen.escanos_max} en el peor caso.`;
+  const rp = (d.recuento || {}).provincias || {};
+  Object.entries(d.provincias).forEach(([cod, a]) => {
+    const r = rp[cod] || {}, cambios = [];
+    new Set([...Object.keys(a.escanos), ...Object.keys(r)]).forEach((k) => { const x = (a.escanos[k] || 0) - (r[k] || 0); if (x) cambios.push(`${NOMBRE[k] || k} ${x > 0 ? "+" + x : "−" + (-x)}`); });
+    if (cambios.length) provs.appendChild(el("span", null, `${(d.nombres || {})[cod] || cod}: ${cambios.join(", ")}`));
+  });
+  if (!provs.children.length) provs.appendChild(el("span", null, "Ninguna: la proyección coincide con el recuento en las 52."));
+}
+cargar();
+setInterval(cargar, 30000);
+</script>
+</body>
+</html>

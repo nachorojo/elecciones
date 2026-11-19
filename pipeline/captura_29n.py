@@ -103,8 +103,16 @@ def capturar(cliente, envio: str, carpeta: Path, provincias: list[str], base: di
                 fallos.append(f"municipios_{p}.csv: {e}")
     # Sin nada escrutado no hay nada que proyectar (saldría la base de 2023 tal cual, que no es una estimación).
     if base is not None and any(r["censo_escrutado"] > 0 for r in registros):
-        proy = P.proyectar_registros(registros, base) | {"envio": envio, "capturado": resumen["capturado"]}
+        proy = P.proyectar_registros(registros, base) | {"envio": envio, "capturado": resumen["capturado"],
+                                                         "hora": resumen.get("hora_interior", ""), "simulacro": simulacro}
+        if tot:      # recuento del mismo envío, por espacio, para poder compararlo con la proyección
+            suma = lambda a: {f: sum(p["e"] for p in a["partidos"] if p["f"] == f) for f in {p["f"] for p in a["partidos"] if p["e"]}}
+            proy["recuento"] = {"nacional": suma(web["nacional"]), "provincias": {k: suma(a) for k, a in web["provincias"].items()}}
+            proy["nombres"] = {k: a["nombre"] for k, a in web["provincias"].items()}
         (destino / "proyeccion.json").write_text(json.dumps(proy, ensure_ascii=False, indent=1), encoding="utf-8")
+        # Copia para la página oculta web/proyeccion.html (se publica junto al recuento; no está enlazada desde la web).
+        if not any("retrocede" in f for f in fallos):
+            E.guardar(proy, salida_web.with_name("proyeccion_29n.json"))
         resumen |= {"proyeccion": proy["nacional"]["escanos"], "margen": proy["margen"]["escanos_media"],
                     "escrutado_municipios": proy["escrutado"]}
     resumen["fallos"] = fallos
@@ -122,8 +130,8 @@ def _escrutado_publicado(fichero: Path, simulacro: bool) -> float:
 
 def publicar(fichero: Path, mensaje: str) -> str:
     """git add + commit + push del fichero de la web y del resumen para pantallas. Devuelve el error, o cadena vacía."""
-    ficheros = [str(fichero)] + [str(f) for f in (fichero.with_name("pantallas_29n.json"), fichero.with_name("pantallas_29n.csv"))
-                                 if f.exists()]
+    ficheros = [str(fichero)] + [str(f) for f in (fichero.with_name("pantallas_29n.json"), fichero.with_name("pantallas_29n.csv"),
+                                                  fichero.with_name("proyeccion_29n.json")) if f.exists()]
     for orden in (["git", "add", *ficheros], ["git", "commit", "-q", "-m", mensaje], ["git", "push", "-q"]):
         r = subprocess.run(orden, cwd=C.REPO, capture_output=True, text=True)
         if r.returncode != 0 and "nothing to commit" not in (r.stdout + r.stderr):

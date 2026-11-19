@@ -428,7 +428,8 @@ if __name__ == "__main__":
     elif a.demo:
         print(guardar(a_web(leer_totales(demo()), prueba=True), DEMO))
     elif a.vacio:
-        print(guardar(vacio(), VIVO), guardar_pantallas(vacio()))
+        print(guardar(vacio(), VIVO), guardar_pantallas(vacio()),
+              guardar({"escrutado": 0, "nacional": {"escanos": {}, "pct": {}}, "provincias": {}}, WEB / "proyeccion_29n.json"))
     else:
         texto = descargar() if a.descargar else Path(a.fichero).read_text(encoding="utf-8", errors="replace")
         web = a_web(leer_totales(texto))
