@@ -94,7 +94,7 @@ def test_totales_reales_del_simulacro():
     bildu = next(p for p in n["partidos"] if p["f"] == "EH_BILDU")
     assert (bildu["e"], bildu["v"], bildu["incluye"]) == (5, 270_073 + 8_234, ["EH BILDU-ERC"])
     assert sum(1 for p in n["partidos"] if p["f"] == "COMPROMIS") == 1 and len([p for p in n["partidos"] if p["f"] == "OTROS"]) > 20
-    assert n["avances"] == [40.4, 53.1] and n["mesas"] == {"total": 61033, "constituidas": 61033}
+    assert n["avances"] == [40.4, 53.1] and n["mesas"] == {"total": 61033, "constituidas": 61033, "suspendidas": 0}
     m = web["provincias"]["28"]
     assert m["escanos_total"] == 38 and m["avances"] == [41.14, 53.93]
     assert m["ultimo"] == {"ultima": "0007", "proxima": "0006", "faltan": 40925}          # último PP; Vox a 40.925 votos
