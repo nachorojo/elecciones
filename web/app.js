@@ -351,14 +351,11 @@ async function inicio() {
   setInterval(() => { if (sel.value === "2026" && !document.hidden) cargarVivo(false); }, 1000 * Math.max(10, CFG.refresco));
   $("#metrica").addEventListener("change", pintar);
   $("#volver").addEventListener("click", () => { seleccion = null; Municipal.limpiar(); Seccion.limpiar(); Simulador.limpiar(); pintar(); });
-  // El simulador no se enseña en abierto hasta que Jurídico confirme (LOREG art. 69.7): solo con ?simulador en la dirección.
-  if (new URLSearchParams(location.search).has("simulador")) {
-    $("#vista-sim").hidden = false;
-    $("#vista-sim").addEventListener("click", () => cambiarVista("sim"));
-  }
+  $("#vista-sim").addEventListener("click", () => cambiarVista("sim"));
   $("#vista-sec").addEventListener("click", () => cambiarVista("sec"));
   $("#vista-prov").addEventListener("click", () => cambiarVista("prov"));
   $("#vista-mun").addEventListener("click", () => cambiarVista("mun"));
-  pintar();
+  // La entrada «Simulador» del menú abre la página con ?simulador: se entra directamente en esa vista.
+  if (new URLSearchParams(location.search).has("simulador")) cambiarVista("sim"); else pintar();
 }
 inicio().catch((err) => { document.querySelector("main").prepend(el("p", "aviso", "No se pudieron cargar los datos (" + err.message + "). Comprueba que existe web/data/resultados.js.")); });

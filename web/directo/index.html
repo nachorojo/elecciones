@@ -14,6 +14,10 @@
     vista=arco           pantalla completa: hemiciclo (fuera 2026, dentro 2023) y tabla
     vista=participacion  pantalla completa: constitución de mesas y avances de las 14:00 y las 18:00
     vista=provincia&provincia=28   pantalla completa: una provincia, con el último escaño
+    vista=bucle          pantalla completa: todos los gráficos, uno tras otro (cada=12 segundos por gráfico;
+                         vistas=arco,participacion,columna,faldon,provincia; provincias=28,08,46,41,29,48,50).
+                         Antes del escrutinio solo alterna participación y faldón.
+  Galería con miniaturas de todos: galeria.html
   Opciones:
     fondo=transparente | oscuro | croma     (por defecto: transparente en faldon/columna, oscuro en el resto)
     lado=derecha         columna a la derecha            paso=6     segundos por página del carrusel
@@ -112,6 +116,8 @@
   #participacion .av .n small { font-size: 80px; }
   #participacion .av .b { height: 22px; border-radius: 11px; background: rgba(255, 255, 255, .12); margin-top: 26px; overflow: hidden; }
   #participacion .av .b i { display: block; height: 100%; background: var(--acento); border-radius: 11px; }
+  #participacion .av .cmp { font-size: 34px; font-weight: 600; margin-top: 26px; min-height: 48px; }
+  #participacion .av .ref { font-size: 26px; color: var(--tenue); margin-top: 8px; }
   #participacion .av.pendiente .n { color: rgba(255, 255, 255, .25); }
   #provincia .lleno { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto 1fr; }
   #provincia .titulo, #provincia .ultimo { grid-column: 1 / -1; }
@@ -166,8 +172,13 @@
 
 <script>
 const Q = new URLSearchParams(location.search);
-const VISTA = Q.get("vista") || "arco";
-const SUPERPUESTA = VISTA === "faldon" || VISTA === "columna";
+const TODAS = ["arco", "participacion", "columna", "faldon", "provincia"];
+const BUCLE = Q.get("vista") === "bucle";
+const VISTAS = (Q.get("vistas") || TODAS.join(",")).split(",").filter((v) => TODAS.includes(v));
+const PROVS = (Q.get("provincias") || "28,08,46,41,29,48,50").split(",");
+let VISTA = BUCLE ? VISTAS[0] || "arco" : Q.get("vista") || "arco";
+let PROV = Q.get("provincia") || PROVS[0];
+const SUPERPUESTA = !BUCLE && (VISTA === "faldon" || VISTA === "columna");
 document.body.dataset.vista = VISTA;
 document.body.classList.add("fondo-" + (Q.get("fondo") || (SUPERPUESTA ? "transparente" : "oscuro")));
 if (Q.get("lado") === "derecha") document.body.classList.add("lado-derecha");
@@ -183,6 +194,8 @@ const COLOR = { PP: "#1D84CE", PSOE: "#E30713", VOX: "#5BA82B", FA: "#E51C55", P
   ERC: "#E0A020", JUNTS: "#00A99D", EH_BILDU: "#7BA21A", PNV: "#0F6B3C", BNG: "#5F93C0", CC: "#C9A400", COMPROMIS: "#D96A2B",
   NC: "#3C8D5A", ADELANTE: "#2AA198", TERUEL_EXISTE: "#4B6B4F", GBAI: "#B0333A", PACMA: "#9BB52B" };
 // Reparto oficial de 2023 (anillo interior y comparación). PP incluye el escaño de UPN, hoy en coalición.
+// Avances de participación de las dos generales anteriores (Interior, vía la tabla de Wikipedia; ver escrutinio_29n.py).
+const AV_PREVIOS = [{ 2023: 40.48, 2019: 37.92 }, { 2023: 53.12, 2019: 56.86 }];
 const E2023 = { PP: 138, PSOE: 121, VOX: 33, ERC: 7, JUNTS: 7, EH_BILDU: 6, PNV: 5, BNG: 1, CC: 1 };
 const ARCO2023 = [["PP", 138], ["PSOE", 121], ["VOX", 33], ["SUMAR", 31], ["ERC", 7], ["JUNTS", 7], ["EH_BILDU", 6], ["PNV", 5], ["BNG", 1], ["CC", 1]];
 const col = (f) => COLOR[f] || (f === "SUMAR" ? "#E51C55" : "#8D98A6");
@@ -327,11 +340,17 @@ function pintarParticipacion() {
   $("#p-h").textContent = "Fuente: Ministerio del Interior";
   const cont = $("#p-dos");
   cont.replaceChildren();
-  [["Avance de las 14:00", av[0]], ["Avance de las 18:00", av[1]]].forEach(([t, v]) => {
+  [["Avance de las 14:00", av[0]], ["Avance de las 18:00", av[1]]].forEach(([t, v], k) => {
     const c = el("div", "av" + (v > 0 ? "" : " pendiente"));
     const n = el("div", "n", v > 0 ? dec(v, 1) : "—"); if (v > 0) n.appendChild(el("small", null, " %"));
     const b = el("div", "b"); const i = el("i"); i.style.width = Math.min(100, v || 0) + "%"; b.appendChild(i);
-    c.append(el("div", "h", t), n, b);
+    const cmp = el("div", "cmp"), antes = AV_PREVIOS[k];
+    if (v > 0) {
+      const d = v - antes[2023];
+      cmp.append(el("span", "delta " + (d > 0 ? "sube" : d < 0 ? "baja" : "igual"), (d > 0 ? "▲ " : d < 0 ? "▼ " : "= ") + dec(Math.abs(d), 2) + " puntos"), " respecto a 2023");
+    }
+    const ref = el("div", "ref", `Julio de 2023: ${dec(antes[2023], 2)} %  ·  Noviembre de 2019: ${dec(antes[2019], 2)} %`);
+    c.append(el("div", "h", t), n, b, cmp, ref);
     cont.appendChild(c);
   });
   const m = a.mesas || {};
@@ -339,7 +358,7 @@ function pintarParticipacion() {
                         [m.total ? num(m.total) : "—", "mesas electorales"], [a.censo ? num(a.censo) : "—", "electores"]]);
 }
 function pintarProvincia() {
-  const cod = Q.get("provincia") || "28", a = D.provincias[cod];
+  const cod = PROV, a = D.provincias[cod];
   if (!a) return;
   $("#v-sello").hidden = !D.simulacro;
   $("#v-titulo").replaceChildren(a.nombre + " ", el("b", null, a.escanos_total + " escaños"));
@@ -357,6 +376,20 @@ function pintarProvincia() {
 }
 const PINTAR = { faldon: pintarFaldon, columna: pintarColumna, arco: pintarArco, participacion: pintarParticipacion, provincia: pintarProvincia };
 
+function mostrar() { document.body.dataset.vista = VISTA; (PINTAR[VISTA] || pintarArco)(); }
+// Bucle: pasa al gráfico siguiente. Sin escrutinio solo tienen contenido la participación y el faldón.
+let paso = 0, vueltaProv = 0;
+function siguiente() {
+  if (!D) return;
+  const hay = D.nacional.escrutado > 0;
+  const lista = VISTAS.filter((v) => hay || v === "participacion" || v === "faldon");
+  if (!lista.length) return;
+  paso++;
+  VISTA = lista[paso % lista.length];
+  if (VISTA === "provincia") PROV = PROVS[vueltaProv++ % PROVS.length];
+  if (VISTA === "faldon") pagina++;
+  mostrar();
+}
 async function cargar() {
   try {
     const r = await fetch(ORIGEN, { cache: "no-store" });
@@ -364,12 +397,13 @@ async function cargar() {
     const txt = await r.text();
     if (txt === firma) return;          // sin cambios: no se repinta (evita parpadeos en emisión)
     firma = txt; D = JSON.parse(txt);
-    (PINTAR[VISTA] || pintarArco)();
+    mostrar();
   } catch (e) { /* se mantiene lo último que se pintó */ }
 }
 cargar();
 setInterval(cargar, 15000);
-if (VISTA === "faldon") setInterval(() => { if (D) { pagina++; pintarFaldon(); } }, PASO);
+if (BUCLE) setInterval(siguiente, 1000 * Math.max(4, Number(Q.get("cada")) || 12));
+else if (VISTA === "faldon") setInterval(() => { if (D) { pagina++; pintarFaldon(); } }, PASO);
 </script>
 </body>
 </html>

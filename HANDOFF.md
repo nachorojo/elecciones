@@ -52,7 +52,7 @@ hasta pasada la medianoche, y alguien que mire la ventana de vez en cuando. Un s
 - El resultado de la noche no incluye el voto exterior (CERA), que se cuenta días después y puede mover algún escaño.
 
 ### Pendiente antes del 29 (no técnico)
-- Jurídico: si el simulador (`?simulador`) y la proyección pueden enseñarse, y cuándo (LOREG 69.7; veda desde el 24 de noviembre).
+- Jurídico: si el simulador y la proyección pueden enseñarse, y cuándo (LOREG 69.7; veda desde el 24 de noviembre). Desde el 19-N la web es de uso interno (no se publica) y todo está en el menú; ver CLAUDE.md, «Web de uso interno con menú».
 - Redacción: validar la agrupación de candidaturas en espacios (`data/web/29n/candidaturas_congreso.csv` y `candidaturas_api_2026.csv`).
 - Confirmar con Interior que la URL y la clave del simulacro son las del día 29.
 - Si Netlify limita los despliegues: publicar como mucho uno cada cinco minutos, o pasar el fichero a un almacén externo (`web/config.js`).

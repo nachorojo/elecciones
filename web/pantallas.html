@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>29N · Datos para pantallas exteriores</title>
+<link rel="stylesheet" href="estilo.css">
+<style>
+  .tarjeta { min-width: 0; margin-bottom: 18px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--borde); font-size: 14px; vertical-align: top; }
+  td a, code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; overflow-wrap: anywhere; }
+  pre { margin: 0; padding: 14px; border-radius: 10px; background: var(--superficie-alta); overflow: auto; max-height: 420px; font-size: 12.5px; }
+</style>
+</head>
+<body>
+<header class="cabecera">
+  <div class="marca"><div class="logo" aria-hidden="true"></div>
+    <div><h1>Datos para pantallas exteriores · 29N</h1><p>Ficheros que recoge el proveedor de pantallas</p></div></div>
+  <span class="insignia" id="estado">Cargando…</span>
+</header>
+<main>
+  <section class="tarjeta">
+    <h2>Direcciones</h2>
+    <div style="overflow-x:auto"><table>
+      <thead><tr><th>Fichero</th><th>Dirección</th><th>Contenido</th></tr></thead>
+      <tbody id="urls"></tbody>
+    </table></div>
+    <p class="nota">Los ficheros cambian con cada envío del Ministerio del Interior: uno cada 3 minutos aproximadamente durante el
+      escrutinio (así fue en el simulacro del 18 de noviembre), más unos segundos de publicación. Con que el proveedor los pida
+      cada minuto, va sobrado. Antes de las 14:00 del día 29 están vacíos (fase «previa»); de 14:00 a 20:00 traen los avances
+      de participación; desde las 20:00, el escrutinio. Solo nivel nacional. Los de ejemplo no cambian: son el último envío del simulacro
+      (datos ficticios), para desarrollar.</p>
+  </section>
+  <section class="tarjeta">
+    <h2>Qué hay ahora en el fichero real (JSON)</h2>
+    <pre id="json">…</pre>
+  </section>
+  <section class="tarjeta">
+    <h2>Y en el CSV</h2>
+    <p class="nota">Separador «;», decimales con punto. En las filas <code>avance</code>, la última columna es la participación a esa hora en julio de 2023.</p>
+    <pre id="csv">…</pre>
+  </section>
+</main>
+<script src="menu.js"></script>
+<script>
+const FICHEROS = [["pantallas_29n.json", "Recuento real, JSON"], ["pantallas_29n.csv", "Recuento real, CSV"],
+                  ["pantallas_ejemplo.json", "Ejemplo (simulacro), JSON"], ["pantallas_ejemplo.csv", "Ejemplo (simulacro), CSV"]];
+const base = new URL("data/", location.href).href;
+FICHEROS.forEach(([f, t]) => {
+  const tr = document.createElement("tr");
+  const a = Object.assign(document.createElement("a"), { href: base + f, textContent: base + f });
+  const td = document.createElement("td"); td.appendChild(a);
+  tr.append(Object.assign(document.createElement("td"), { textContent: f }), td, Object.assign(document.createElement("td"), { textContent: t }));
+  document.querySelector("#urls").appendChild(tr);
+});
+async function cargar() {
+  try {
+    const d = await (await fetch("data/pantallas_29n.json", { cache: "no-store" })).json();
+    document.querySelector("#json").textContent = JSON.stringify(d, null, 1);
+    document.querySelector("#estado").textContent = { previa: "Sin datos todavía", participacion: "Avances de participación", escrutinio: `${d.escrutado_pct} % escrutado` }[d.fase] || d.fase;
+    document.querySelector("#csv").textContent = await (await fetch("data/pantallas_29n.csv", { cache: "no-store" })).text();
+  } catch (e) { document.querySelector("#estado").textContent = "Sin datos"; }
+}
+cargar();
+setInterval(cargar, 30000);
+</script>
+</body>
+</html>

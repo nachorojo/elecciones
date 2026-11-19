@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>29N · Gráficos de directo</title>
+<!-- Galería de los gráficos para OBS (index.html de esta carpeta): miniaturas en vivo, dirección de cada uno y bucle. -->
+<link rel="stylesheet" href="../estilo.css">
+<style>
+  .barra-datos { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 18px; }
+  .boton { display: inline-block; padding: 9px 16px; border-radius: 9px; border: 1px solid var(--borde); background: var(--superficie);
+           color: var(--texto); text-decoration: none; font-size: 14px; font: inherit; cursor: pointer; }
+  .boton.principal { background: var(--acento); border-color: var(--acento); color: #fff; font-weight: 600; }
+  .galeria { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
+  .mini { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); overflow: hidden; box-shadow: var(--sombra); }
+  .mini a.marco { display: block; position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: #0a0f1a; }
+  .mini iframe { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; border: 0; transform-origin: 0 0; pointer-events: none; }
+  .mini .txt { padding: 12px 14px 14px; }
+  .mini h3 { margin: 0 0 2px; font-size: 15.5px; }
+  .mini p { margin: 0 0 10px; font-size: 13px; color: var(--texto-tenue); }
+  .mini .url { display: flex; gap: 8px; }
+  .mini input { flex: 1; min-width: 0; font: 12px ui-monospace, Consolas, monospace; padding: 7px 8px; border-radius: 7px;
+                border: 1px solid var(--borde); background: var(--superficie-alta); color: var(--texto); }
+  .mini .boton { padding: 6px 10px; font-size: 13px; }
+</style>
+</head>
+<body>
+<header class="cabecera">
+  <div class="marca"><div class="logo" aria-hidden="true"></div>
+    <div><h1>Gráficos de directo · 29N</h1><p>Para capturar con OBS (fuente «Navegador», 1920 × 1080) · se actualizan solos</p></div></div>
+  <span class="insignia">Uso interno &middot; no publicar</span>
+</header>
+<main>
+  <div class="barra-datos">
+    <label>Datos
+      <select id="datos">
+        <option value="">Recuento real del 29N</option>
+        <option value="simulacro">Ensayo: último envío del simulacro (datos ficticios)</option>
+      </select>
+    </label>
+    <a class="boton principal" id="bucle" target="_blank" rel="noopener">▶ Bucle a pantalla completa</a>
+  </div>
+  <p class="nota">Pulsa una miniatura para abrir el gráfico a tamaño real. El faldón y la columna se superponen al plano de estudio
+    (fondo transparente en OBS); aquí se ven sobre fondo oscuro. Antes de las 20:00 del día 29 el recuento real está vacío:
+    usa el ensayo para ver cómo quedan.</p>
+  <div class="galeria" id="galeria"></div>
+  <section class="aviso" style="margin-top:22px"><strong>Opciones de la dirección.</strong>
+    <code>fondo=transparente|oscuro|croma</code> · <code>lado=derecha</code> (columna) · <code>paso=6</code> (segundos del carrusel del faldón) ·
+    <code>provincia=28</code> (código de provincia) · en el bucle, <code>cada=12</code> (segundos por gráfico),
+    <code>vistas=arco,participacion,…</code> y <code>provincias=28,08,46,…</code>. La participación se compara con julio de 2023 y
+    noviembre de 2019 (Ministerio del Interior).</section>
+</main>
+<script src="../menu.js" data-base="../"></script>
+<script>
+const VISTAS = [
+  ["arco", "Hemiciclo y tabla", "Pantalla completa: 2026 fuera, 2023 dentro.", ""],
+  ["participacion", "Participación", "Avances de las 14:00 y las 18:00, comparados con 2023 y 2019.", ""],
+  ["faldon", "Faldón", "Barra inferior con carrusel de partidos. Superpuesto.", ""],
+  ["columna", "Columna", "Lateral con todos los partidos con escaño. Superpuesto.", ""],
+  ["provincia", "Provincia: Madrid", "Resultado y último escaño de una provincia.", "&provincia=28"],
+  ["provincia", "Provincia: Barcelona", "Cambia el código en la dirección para otra provincia.", "&provincia=08"],
+];
+const sel = document.querySelector("#datos"), gal = document.querySelector("#galeria");
+sel.value = new URLSearchParams(location.search).get("datos") === "simulacro" ? "simulacro" : "";
+const base = new URL("index.html", location.href).href.replace(/index\.html$/, "");
+function escalar() { document.querySelectorAll(".mini a.marco").forEach((m) => { m.firstChild.style.transform = `scale(${m.clientWidth / 1920})`; }); }
+function pintar() {
+  const d = sel.value ? "&datos=" + sel.value : "";
+  document.querySelector("#bucle").href = `${base}?vista=bucle${d}`;
+  gal.replaceChildren();
+  VISTAS.forEach(([v, titulo, texto, extra]) => {
+    const superpuesta = v === "faldon" || v === "columna";
+    const real = `${base}?vista=${v}${extra}${d}`;
+    const caja = document.createElement("div"); caja.className = "mini";
+    const marco = Object.assign(document.createElement("a"), { className: "marco", href: real + (superpuesta ? "&fondo=oscuro" : ""), target: "_blank", rel: "noopener" });
+    marco.appendChild(Object.assign(document.createElement("iframe"), { src: real + (superpuesta ? "&fondo=oscuro" : ""), title: titulo, loading: "lazy", tabIndex: -1 }));
+    const txt = document.createElement("div"); txt.className = "txt";
+    const url = document.createElement("div"); url.className = "url";
+    const campo = Object.assign(document.createElement("input"), { value: real, readOnly: true });
+    campo.setAttribute("aria-label", "Dirección para OBS: " + titulo);
+    const copiar = Object.assign(document.createElement("button"), { className: "boton", type: "button", textContent: "Copiar" });
+    copiar.addEventListener("click", () => { campo.select(); (navigator.clipboard ? navigator.clipboard.writeText(real) : Promise.reject()).catch(() => document.execCommand("copy")); copiar.textContent = "Copiada"; setTimeout(() => { copiar.textContent = "Copiar"; }, 1500); });
+    url.append(campo, copiar);
+    txt.append(Object.assign(document.createElement("h3"), { textContent: titulo }), Object.assign(document.createElement("p"), { textContent: texto }), url);
+    caja.append(marco, txt);
+    gal.appendChild(caja);
+  });
+  escalar();
+}
+sel.addEventListener("change", pintar);
+addEventListener("resize", escalar);
+pintar();
+</script>
+</body>
+</html>

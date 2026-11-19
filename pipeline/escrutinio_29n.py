@@ -369,6 +369,10 @@ COLORES = {"PP": "#1D84CE", "PSOE": "#E30713", "VOX": "#5BA82B", "FA": "#E51C55"
 # Escaños de 2023 (oficiales) con los que se compara cada espacio; None = sin comparación directa (Sumar tuvo 31).
 ESCANOS_2023 = {"PP": 138, "PSOE": 121, "VOX": 33, "ERC": 7, "JUNTS": 7, "EH_BILDU": 6, "PNV": 5, "BNG": 1, "CC": 1}
 HORAS_AVANCE = ("14:00", "18:00")
+# Avances nacionales de las dos generales anteriores, para comparar. Fuente: Ministerio del Interior, tomados de la
+# tabla de Wikipedia que aportó Nacho (2026-11-19); por comunidades, en data/web/29n/participacion_avances_previos.csv.
+# NO contrastados aquí con los ficheros de Interior (están en el PC; infoelectoral no responde desde la nube).
+AVANCES_PREVIOS = {"14:00": {"2023": 40.48, "2019": 37.92}, "18:00": {"2023": 53.12, "2019": 56.86}}
 
 
 def pantallas(web: dict, envio: str = "") -> dict:
@@ -386,18 +390,20 @@ def pantallas(web: dict, envio: str = "") -> dict:
             "escrutado_pct": n["escrutado"], "participacion_pct": n["participacion_residentes"] if n["escrutado"] > 0 else None,
             "electores": n["censo"], "votantes": n["votantes"], "votos_blancos": n["blancos"], "votos_nulos": n["nulos"],
             "mesas": n.get("mesas"),
-            "avances": [{"hora": h, "participacion_pct": v} for h, v in zip(HORAS_AVANCE, av) if v > 0],
+            "avances": [{"hora": h, "participacion_pct": v, "participacion_2023_pct": AVANCES_PREVIOS[h]["2023"],
+                         "participacion_nov2019_pct": AVANCES_PREVIOS[h]["2019"]} for h, v in zip(HORAS_AVANCE, av) if v > 0],
             "partidos": partidos,
             "nota": "Recuento provisional del Ministerio del Interior. Porcentajes sobre votos válidos. Sin voto exterior (CERA)."}
 
 
 def pantallas_csv(d: dict) -> str:
     """El mismo resumen en CSV (separador «;», decimales con punto): una fila por dato general y una por partido."""
+    # En las filas «avance», la última columna es la participación a esa hora en julio de 2023.
     filas = [["tipo", "id", "nombre", "escanos", "votos", "porcentaje", "escanos_2023"],
              ["general", "actualizado", d["actualizado"], "", "", "", ""],
              ["general", "escrutado_pct", "", "", "", d["escrutado_pct"], ""],
              ["general", "participacion_pct", "", "", "", "" if d["participacion_pct"] is None else d["participacion_pct"], ""]]
-    filas += [["avance", a["hora"], "", "", "", a["participacion_pct"], ""] for a in d["avances"]]
+    filas += [["avance", a["hora"], "", "", "", a["participacion_pct"], a["participacion_2023_pct"]] for a in d["avances"]]
     filas += [["partido", p["id"], p["nombre"], p["escanos"], p["votos"], p["porcentaje"],
                "" if p["escanos_2023"] is None else p["escanos_2023"]] for p in d["partidos"]]
     return "\r\n".join(";".join(str(c) for c in f) for f in filas) + "\r\n"

@@ -143,3 +143,9 @@ button.secundario {
 .marco-canarias { fill: none; stroke: var(--borde); stroke-width: 1; }
 .ultimo { margin: 0 0 14px; padding: 10px 12px; border-radius: 10px; background: var(--acento-suave); font-size: 14px; }
 [hidden] { display: none !important; }
+
+/* Menú común (menu.js) */
+.menu { display: flex; gap: 4px; overflow-x: auto; padding: 0 20px; background: var(--superficie); border-bottom: 1px solid var(--borde); }
+.menu a { flex: none; padding: 11px 12px; font-size: 14px; color: var(--texto-tenue); text-decoration: none; border-bottom: 3px solid transparent; }
+.menu a:hover { color: var(--texto); }
+.menu a[aria-current="page"] { color: var(--texto); font-weight: 600; border-bottom-color: var(--acento); }
