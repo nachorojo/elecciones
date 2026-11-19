@@ -32,6 +32,10 @@ from .convocatoria_29n import espacio
 WEB = C.REPO / "web" / "data"
 VIVO = WEB / "vivo_29n.json"
 DEMO = WEB / "demo_29n.json"
+PANTALLAS = WEB / "pantallas_29n.json"          # resumen mínimo para terceros (pantallas en la calle); también .csv
+PANTALLAS_EJEMPLO = WEB / "pantallas_ejemplo.json"   # el mismo formato, con el último envío del simulacro
+SIMULACRO = WEB / "simulacro_29n.json"          # último envío del simulacro de Interior (18-N-2026); se ve con ?simulacro
+DATOS_SIMULACRO = C.REPO / "tests" / "datos" / "simulacro"
 CONV = C.REPO / "data" / "web" / "29n"
 FECHA = "29 de noviembre de 2026"
 N_CAND = 80
@@ -234,7 +238,7 @@ def a_web(registros: list[dict], prueba: bool = False, simulacro: bool = False, 
         a = _ambito(r, nombre)
         x = av.get((r["tipo"], r["prov"]))
         if x:
-            a["mesas"] = {"total": x["mesas"], "constituidas": x["mesas_constituidas"]}
+            a["mesas"] = {"total": x["mesas"], "constituidas": x["mesas_constituidas"], "suspendidas": x["mesas_suspendidas"]}
             a["avances"] = [k["pct"] for k in x["avances"]]
         return a
 
@@ -348,6 +352,64 @@ def descargar() -> str:
     return texto(c.totales(c.envio()))
 
 
+def simulacro_web() -> dict:
+    """Último envío del simulacro del 18 de noviembre (ficheros reales de Interior, datos ficticios)."""
+    return a_web(leer_totales(texto((DATOS_SIMULACRO / "totales.csv").read_bytes())), simulacro=True,
+                 avances=leer_avances(texto((DATOS_SIMULACRO / "avances.csv").read_bytes())))
+
+
+NOMBRES = {"PP": "PP", "PSOE": "PSOE", "VOX": "Vox", "FA": "Frente Amplio", "PODEMOS": "Podemos", "SALF": "Se Acabó la Fiesta",
+           "ERC": "ERC", "JUNTS": "Junts", "EH_BILDU": "EH Bildu", "PNV": "PNV", "BNG": "BNG", "CC": "Coalición Canaria",
+           "COMPROMIS": "Compromís", "NC": "Nueva Canarias-Podemos-IU-Sumar", "ADELANTE": "Adelante Andalucía",
+           "TERUEL_EXISTE": "Teruel Existe", "GBAI": "Geroa Bai", "PACMA": "PACMA"}
+COLORES = {"PP": "#1D84CE", "PSOE": "#E30713", "VOX": "#5BA82B", "FA": "#E51C55", "PODEMOS": "#6B2E7A", "SALF": "#7A5230",
+           "ERC": "#E0A020", "JUNTS": "#00A99D", "EH_BILDU": "#7BA21A", "PNV": "#0F6B3C", "BNG": "#5F93C0", "CC": "#C9A400",
+           "COMPROMIS": "#D96A2B", "NC": "#3C8D5A", "ADELANTE": "#2AA198", "TERUEL_EXISTE": "#4B6B4F", "GBAI": "#B0333A",
+           "PACMA": "#9BB52B"}
+# Escaños de 2023 (oficiales) con los que se compara cada espacio; None = sin comparación directa (Sumar tuvo 31).
+ESCANOS_2023 = {"PP": 138, "PSOE": 121, "VOX": 33, "ERC": 7, "JUNTS": 7, "EH_BILDU": 6, "PNV": 5, "BNG": 1, "CC": 1}
+HORAS_AVANCE = ("14:00", "18:00")
+
+
+def pantallas(web: dict, envio: str = "") -> dict:
+    """Resumen mínimo del estado nacional para un proveedor externo (pantallas): pocas cifras y nombres legibles.
+    Sale de la misma salida que pinta la web, así que ambas enseñan siempre lo mismo."""
+    n = web["nacional"]
+    partidos = [{"id": p["f"] if p["f"] != "OTROS" else p["s"], "nombre": NOMBRES.get(p["f"], p["s"]), "siglas": p["s"],
+                 "escanos": p["e"], "votos": p["v"], "porcentaje": round(100 * p["v"] / n["validos"], 2) if n["validos"] else 0.0,
+                 "escanos_2023": ESCANOS_2023.get(p["f"]), "color": COLORES.get(p["f"], "#8D98A6")}
+                for p in n["partidos"] if p["e"] > 0 or (n["validos"] and p["v"] >= 0.01 * n["validos"])]
+    av = n.get("avances") or []
+    return {"eleccion": "Elecciones generales · " + web["fecha"], "simulacro": bool(web.get("simulacro")), "envio": envio,
+            "actualizado": web["hora"], "fase": "escrutinio" if n["escrutado"] > 0 else "participacion" if any(av) else "previa",
+            "escanos_total": n["escanos_total"], "mayoria_absoluta": n["escanos_total"] // 2 + 1,
+            "escrutado_pct": n["escrutado"], "participacion_pct": n["participacion_residentes"] if n["escrutado"] > 0 else None,
+            "electores": n["censo"], "votantes": n["votantes"], "votos_blancos": n["blancos"], "votos_nulos": n["nulos"],
+            "mesas": n.get("mesas"),
+            "avances": [{"hora": h, "participacion_pct": v} for h, v in zip(HORAS_AVANCE, av) if v > 0],
+            "partidos": partidos,
+            "nota": "Recuento provisional del Ministerio del Interior. Porcentajes sobre votos válidos. Sin voto exterior (CERA)."}
+
+
+def pantallas_csv(d: dict) -> str:
+    """El mismo resumen en CSV (separador «;», decimales con punto): una fila por dato general y una por partido."""
+    filas = [["tipo", "id", "nombre", "escanos", "votos", "porcentaje", "escanos_2023"],
+             ["general", "actualizado", d["actualizado"], "", "", "", ""],
+             ["general", "escrutado_pct", "", "", "", d["escrutado_pct"], ""],
+             ["general", "participacion_pct", "", "", "", "" if d["participacion_pct"] is None else d["participacion_pct"], ""]]
+    filas += [["avance", a["hora"], "", "", "", a["participacion_pct"], ""] for a in d["avances"]]
+    filas += [["partido", p["id"], p["nombre"], p["escanos"], p["votos"], p["porcentaje"],
+               "" if p["escanos_2023"] is None else p["escanos_2023"]] for p in d["partidos"]]
+    return "\r\n".join(";".join(str(c) for c in f) for f in filas) + "\r\n"
+
+
+def guardar_pantallas(web: dict, envio: str = "", salida: Path = PANTALLAS) -> Path:
+    d = pantallas(web, envio)
+    guardar(d, salida)
+    salida.with_suffix(".csv").write_text(pantallas_csv(d), encoding="utf-8", newline="")
+    return salida
+
+
 def guardar(datos: dict, salida: Path) -> Path:
     salida.write_text(json.dumps(datos, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     return salida
@@ -358,12 +420,16 @@ if __name__ == "__main__":
     ap.add_argument("fichero", nargs="?")
     ap.add_argument("--vacio", action="store_true")
     ap.add_argument("--demo", action="store_true")
+    ap.add_argument("--simulacro-web", action="store_true", help="regenera web/data/simulacro_29n.json")
     ap.add_argument("--descargar", action="store_true")
     a = ap.parse_args()
-    if a.demo:
+    if a.simulacro_web:
+        print(guardar(simulacro_web(), SIMULACRO), guardar_pantallas(simulacro_web(), "130", PANTALLAS_EJEMPLO))
+    elif a.demo:
         print(guardar(a_web(leer_totales(demo()), prueba=True), DEMO))
     elif a.vacio:
-        print(guardar(vacio(), VIVO))
+        print(guardar(vacio(), VIVO), guardar_pantallas(vacio()),
+              guardar({"escrutado": 0, "nacional": {"escanos": {}, "pct": {}}, "provincias": {}}, WEB / "proyeccion_29n.json"))
     else:
         texto = descargar() if a.descargar else Path(a.fichero).read_text(encoding="utf-8", errors="replace")
         web = a_web(leer_totales(texto))

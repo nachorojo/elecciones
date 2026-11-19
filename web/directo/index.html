@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<title>29N · Gráficos para directo</title>
+<!--
+  Gráficos del 29N para capturar con OBS (fuente «Navegador», 1920 × 1080, fondo transparente).
+  Leen el mismo fichero que la web (../data/vivo_29n.json) y se refrescan solos cada 15 s.
+
+  Dirección: .../directo/?vista=VISTA[&opción=valor…]
+    vista=faldon         barra inferior con carrusel de partidos (superpuesta sobre el plano de estudio)
+    vista=columna        columna lateral con todos los partidos con escaño (superpuesta)
+    vista=arco           pantalla completa: hemiciclo (fuera 2026, dentro 2023) y tabla
+    vista=participacion  pantalla completa: constitución de mesas y avances de las 14:00 y las 18:00
+    vista=provincia&provincia=28   pantalla completa: una provincia, con el último escaño
+  Opciones:
+    fondo=transparente | oscuro | croma     (por defecto: transparente en faldon/columna, oscuro en el resto)
+    lado=derecha         columna a la derecha            paso=6     segundos por página del carrusel
+    datos=simulacro | demo                  para ensayar sin recuento real (último envío del simulacro de Interior)
+  Logos: si existe logos/<ID>.png (PP.png, PSOE.png, VOX.png, FA.png…), se muestra en lugar del bloque de color.
+-->
+<style>
+  :root { --tinta: #0d1320; --panel: rgba(13, 19, 32, .94); --panel2: rgba(255, 255, 255, .07); --texto: #fff;
+          --tenue: rgba(255, 255, 255, .66); --acento: #19c37d; --sube: #3ddc84; --baja: #ff6b6b; }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: transparent;
+               font-family: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; color: var(--texto);
+               font-variant-numeric: tabular-nums; }
+  body.fondo-oscuro { background: radial-gradient(1200px 700px at 30% 20%, #1b2740, #0a0f1a 70%); }
+  body.fondo-croma { background: #00b140; }
+  .vista { display: none; position: absolute; inset: 0; }
+  body[data-vista="faldon"] #faldon, body[data-vista="columna"] #columna, body[data-vista="arco"] #arco,
+  body[data-vista="participacion"] #participacion, body[data-vista="provincia"] #provincia { display: block; }
+  .sello { font-size: 20px; font-weight: 800; letter-spacing: .12em; padding: 6px 14px; border-radius: 6px;
+           background: #ffb020; color: #1a1300; }
+  .delta { font-weight: 700; } .delta.sube { color: var(--sube); } .delta.baja { color: var(--baja); }
+  .delta.igual { color: var(--tenue); }
+  .logo { display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; font-weight: 800;
+          color: #fff; overflow: hidden; flex: none; text-shadow: 0 1px 2px rgba(0, 0, 0, .35); }
+  .logo img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
+
+  /* ---------- Faldón ---------- */
+  #faldon .barra { position: absolute; left: 60px; right: 60px; bottom: 54px; height: 150px; display: flex;
+                   border-radius: 18px; overflow: hidden; background: var(--panel); box-shadow: 0 12px 40px rgba(0, 0, 0, .45); }
+  #faldon .cab { width: 330px; flex: none; padding: 18px 26px; background: var(--acento); color: #04150d;
+                 display: flex; flex-direction: column; justify-content: center; }
+  #faldon .cab .t { font-size: 19px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+  #faldon .cab .n { font-size: 58px; font-weight: 800; line-height: 1.05; letter-spacing: -.02em; }
+  #faldon .cab .h { font-size: 18px; font-weight: 600; opacity: .8; }
+  #faldon .pista { flex: 1; display: grid; grid-template-columns: repeat(5, 1fr); align-items: stretch; }
+  #faldon .ficha { display: flex; align-items: center; gap: 16px; padding: 0 20px; border-left: 1px solid rgba(255, 255, 255, .1);
+                   animation: entra .5s ease both; min-width: 0; }
+  #faldon .ficha .logo { width: 74px; height: 74px; font-size: 21px; }
+  #faldon .ficha .nom { font-size: 21px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #faldon .ficha .esc { font-size: 50px; font-weight: 800; line-height: 1; letter-spacing: -.02em; }
+  #faldon .ficha .esc small { font-size: 22px; font-weight: 700; margin-left: 8px; }
+  #faldon .ficha .pct { font-size: 19px; color: var(--tenue); }
+  #faldon .pie { position: absolute; right: 76px; bottom: 20px; font-size: 17px; color: #fff; opacity: .85;
+                 text-shadow: 0 1px 3px rgba(0, 0, 0, .8); }
+  @keyframes entra { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- Columna ---------- */
+  #columna .col { position: absolute; top: 40px; bottom: 40px; left: 40px; width: 430px; border-radius: 18px;
+                  background: var(--panel); box-shadow: 0 12px 40px rgba(0, 0, 0, .45); padding: 24px 22px;
+                  display: flex; flex-direction: column; }
+  body.lado-derecha #columna .col { left: auto; right: 40px; }
+  #columna h1 { font-size: 26px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; line-height: 1.1; }
+  #columna h1 b { color: var(--acento); display: block; }
+  #columna .escr { margin: 16px 0 14px; padding: 10px 16px; border-radius: 12px; background: var(--panel2);
+                   display: flex; align-items: baseline; justify-content: space-between; }
+  #columna .escr span { font-size: 18px; color: var(--tenue); font-weight: 600; }
+  #columna .escr b { font-size: 40px; font-weight: 800; letter-spacing: -.02em; }
+  #columna .filas { flex: 1; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+  #columna .fila { display: grid; grid-template-columns: 1fr 78px 62px; align-items: center; height: 50px; flex: none;
+                   border-radius: 9px; padding: 0 14px; font-size: 24px; font-weight: 700; }
+  #columna .fila .n { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0, 0, 0, .3); }
+  #columna .fila .e { text-align: right; font-size: 30px; font-weight: 800; }
+  #columna .fila .d { text-align: right; font-size: 19px; background: rgba(0, 0, 0, .28); border-radius: 6px;
+                      padding: 4px 6px; margin-left: 8px; }
+  #columna .pie { margin-top: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 20px; font-weight: 700; }
+  #columna .pie span { color: var(--tenue); font-weight: 600; }
+
+  /* ---------- Pantallas completas ---------- */
+  .lleno { padding: 56px 72px; display: grid; gap: 40px; height: 100%; }
+  .titulo { display: flex; align-items: center; gap: 22px; }
+  .titulo h1 { font-size: 46px; font-weight: 800; letter-spacing: -.01em; }
+  .titulo h1 b { color: var(--acento); }
+  .titulo .hora { margin-left: auto; font-size: 24px; color: var(--tenue); font-weight: 600; }
+  .cajas { display: flex; gap: 18px; }
+  .caja { flex: 1; background: var(--panel2); border-radius: 16px; padding: 18px 24px; }
+  .caja b { display: block; font-size: 50px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
+  .caja span { font-size: 21px; color: var(--tenue); font-weight: 600; }
+  #arco .lleno { grid-template-columns: 1000px 1fr; grid-template-rows: auto 1fr; }
+  #arco .titulo { grid-column: 1 / -1; }
+  #arco .izq { display: flex; flex-direction: column; gap: 26px; min-height: 0; }
+  #arco svg { width: 100%; height: auto; display: block; }
+  .tabla { display: flex; flex-direction: column; gap: 9px; min-height: 0; overflow: hidden; }
+  .tabla .f { display: grid; grid-template-columns: 62px 1fr 150px 130px; align-items: center; gap: 18px;
+              background: var(--panel2); border-radius: 13px; padding: 9px 20px 9px 10px; flex: none; }
+  .tabla .f .logo { width: 62px; height: 62px; font-size: 17px; }
+  .tabla .f .nom { font-size: 30px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tabla .f .nom small { display: block; font-size: 19px; font-weight: 500; color: var(--tenue); }
+  .tabla .f .pct { text-align: right; font-size: 27px; font-weight: 600; color: var(--tenue); }
+  .tabla .f .esc { text-align: right; font-size: 48px; font-weight: 800; letter-spacing: -.02em; line-height: 1; }
+  .tabla .f .esc small { display: block; font-size: 20px; margin-top: 3px; }
+  #participacion .lleno { grid-template-rows: auto 1fr auto; }
+  #participacion .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: stretch; }
+  #participacion .av { background: var(--panel2); border-radius: 24px; padding: 40px 48px; display: flex; flex-direction: column; justify-content: center; }
+  #participacion .av .h { font-size: 34px; font-weight: 700; color: var(--tenue); }
+  #participacion .av .n { font-size: 190px; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
+  #participacion .av .n small { font-size: 80px; }
+  #participacion .av .b { height: 22px; border-radius: 11px; background: rgba(255, 255, 255, .12); margin-top: 26px; overflow: hidden; }
+  #participacion .av .b i { display: block; height: 100%; background: var(--acento); border-radius: 11px; }
+  #participacion .av.pendiente .n { color: rgba(255, 255, 255, .25); }
+  #provincia .lleno { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto 1fr; }
+  #provincia .titulo, #provincia .ultimo { grid-column: 1 / -1; }
+  #provincia .ultimo { background: var(--acento); color: #04150d; border-radius: 16px; padding: 20px 28px; font-size: 32px; font-weight: 600; }
+  #provincia .ultimo b { font-weight: 800; }
+  .vacio { font-size: 34px; color: var(--tenue); font-weight: 600; align-self: center; }
+</style>
+</head>
+<body>
+
+<section id="faldon" class="vista">
+  <div class="barra">
+    <div class="cab"><div class="t" id="f-t">Escrutado</div><div class="n" id="f-n">—</div><div class="h" id="f-h"></div></div>
+    <div class="pista" id="f-pista"></div>
+  </div>
+  <div class="pie" id="f-pie"></div>
+</section>
+
+<section id="columna" class="vista">
+  <div class="col">
+    <h1>Elecciones <b>generales</b></h1>
+    <div class="escr"><span id="c-t">Escrutado</span><b id="c-n">—</b></div>
+    <div class="filas" id="c-filas"></div>
+    <div class="pie"><div>Mayoría absoluta 176</div><span id="c-h"></span></div>
+  </div>
+</section>
+
+<section id="arco" class="vista">
+  <div class="lleno">
+    <div class="titulo"><h1>Elecciones generales <b>29N</b></h1><span class="sello" id="a-sello" hidden>SIMULACRO</span><span class="hora" id="a-h"></span></div>
+    <div class="izq"><div id="a-svg"></div><div class="cajas" id="a-cajas"></div></div>
+    <div class="tabla" id="a-tabla"></div>
+  </div>
+</section>
+
+<section id="participacion" class="vista">
+  <div class="lleno">
+    <div class="titulo"><h1>Participación <b>29N</b></h1><span class="sello" id="p-sello" hidden>SIMULACRO</span><span class="hora" id="p-h"></span></div>
+    <div class="dos" id="p-dos"></div>
+    <div class="cajas" id="p-cajas"></div>
+  </div>
+</section>
+
+<section id="provincia" class="vista">
+  <div class="lleno">
+    <div class="titulo"><h1 id="v-titulo"></h1><span class="sello" id="v-sello" hidden>SIMULACRO</span><span class="hora" id="v-h"></span></div>
+    <div class="ultimo" id="v-ultimo" hidden></div>
+    <div class="tabla" id="v-tabla"></div>
+    <div class="izq"><div class="cajas" id="v-cajas" style="flex-direction:column"></div></div>
+  </div>
+</section>
+
+<script>
+const Q = new URLSearchParams(location.search);
+const VISTA = Q.get("vista") || "arco";
+const SUPERPUESTA = VISTA === "faldon" || VISTA === "columna";
+document.body.dataset.vista = VISTA;
+document.body.classList.add("fondo-" + (Q.get("fondo") || (SUPERPUESTA ? "transparente" : "oscuro")));
+if (Q.get("lado") === "derecha") document.body.classList.add("lado-derecha");
+const ORIGEN = { simulacro: "../data/simulacro_29n.json", demo: "../data/demo_29n.json" }[Q.get("datos")] || "../data/vivo_29n.json";
+const PASO = 1000 * Math.max(3, Number(Q.get("paso")) || 6);
+
+const NOMBRE = { PP: "PP", PSOE: "PSOE", VOX: "Vox", FA: "Frente Amplio", PODEMOS: "Podemos", SALF: "SALF", ERC: "ERC",
+  JUNTS: "Junts", EH_BILDU: "EH Bildu", PNV: "PNV", BNG: "BNG", CC: "Coalición Canaria", COMPROMIS: "Compromís",
+  NC: "NC-Podemos-IU", ADELANTE: "Adelante And.", TERUEL_EXISTE: "Teruel Existe", GBAI: "Geroa Bai", PACMA: "PACMA" };
+const CORTO = { PP: "PP", PSOE: "PSOE", VOX: "VOX", FA: "FA", PODEMOS: "POD", SALF: "SALF", ERC: "ERC", JUNTS: "JUNTS",
+  EH_BILDU: "BILDU", PNV: "PNV", BNG: "BNG", CC: "CC", COMPROMIS: "COMP", NC: "NC", ADELANTE: "ADEL", TERUEL_EXISTE: "TE", GBAI: "GBAI", PACMA: "PACMA" };
+const COLOR = { PP: "#1D84CE", PSOE: "#E30713", VOX: "#5BA82B", FA: "#E51C55", PODEMOS: "#6B2E7A", SALF: "#7A5230",
+  ERC: "#E0A020", JUNTS: "#00A99D", EH_BILDU: "#7BA21A", PNV: "#0F6B3C", BNG: "#5F93C0", CC: "#C9A400", COMPROMIS: "#D96A2B",
+  NC: "#3C8D5A", ADELANTE: "#2AA198", TERUEL_EXISTE: "#4B6B4F", GBAI: "#B0333A", PACMA: "#9BB52B" };
+// Reparto oficial de 2023 (anillo interior y comparación). PP incluye el escaño de UPN, hoy en coalición.
+const E2023 = { PP: 138, PSOE: 121, VOX: 33, ERC: 7, JUNTS: 7, EH_BILDU: 6, PNV: 5, BNG: 1, CC: 1 };
+const ARCO2023 = [["PP", 138], ["PSOE", 121], ["VOX", 33], ["SUMAR", 31], ["ERC", 7], ["JUNTS", 7], ["EH_BILDU", 6], ["PNV", 5], ["BNG", 1], ["CC", 1]];
+const col = (f) => COLOR[f] || (f === "SUMAR" ? "#E51C55" : "#8D98A6");
+const nom = (p) => NOMBRE[p.f] || p.s;
+const $ = (s) => document.querySelector(s);
+const num = (x) => Math.round(x).toLocaleString("es-ES", { useGrouping: "always" });
+const dec = (x, d = 1) => Number(x).toLocaleString("es-ES", { minimumFractionDigits: d, maximumFractionDigits: d });
+const el = (tag, cls, txt) => { const n = document.createElement(tag); if (cls) n.className = cls; if (txt !== undefined) n.textContent = txt; return n; };
+
+function logo(p) {
+  const d = el("span", "logo", CORTO[p.f] || p.s.slice(0, 5));
+  d.style.background = col(p.f);
+  const id = p.f !== "OTROS" ? p.f : null;
+  if (id) {
+    const img = new Image();
+    img.onload = () => { d.textContent = ""; d.appendChild(img); };
+    img.src = `logos/${id}.png`;
+    img.alt = nom(p);
+  }
+  return d;
+}
+function delta(p, antes) {
+  const base = antes ? antes[p.f] : E2023[p.f];
+  if (base === undefined) return null;
+  const d = p.e - base;
+  return el("span", "delta " + (d > 0 ? "sube" : d < 0 ? "baja" : "igual"), d > 0 ? `+${d}` : d < 0 ? `−${-d}` : "=");
+}
+const conEscano = (a) => [...a.partidos].sort((x, y) => y.e - x.e || y.v - x.v);
+
+let D = null, pagina = 0, firma = "";
+
+function hemiciclo(a) {
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", "0 0 1000 540");
+  const arco = (r1, r2, a0, a1) => {
+    const pt = (r, x) => `${500 - r * Math.cos(x)},${510 - r * Math.sin(x)}`;
+    return `M${pt(r2, a0)}A${r2},${r2} 0 0 1 ${pt(r2, a1)}L${pt(r1, a1)}A${r1},${r1} 0 0 0 ${pt(r1, a0)}Z`;
+  };
+  const texto = (x, y, t, tam, peso, relleno) => {
+    const n = document.createElementNS(NS, "text");
+    n.setAttribute("x", x); n.setAttribute("y", y); n.setAttribute("text-anchor", "middle");
+    n.setAttribute("font-size", tam); n.setAttribute("font-weight", peso); n.setAttribute("fill", relleno || "#fff");
+    n.textContent = t; svg.appendChild(n);
+  };
+  const anillo = (lista, r1, r2, opacidad) => {
+    let acum = 0;
+    if (!lista.length) {
+      const p = document.createElementNS(NS, "path");
+      p.setAttribute("d", arco(r1, r2, 0, Math.PI)); p.setAttribute("fill", "rgba(255,255,255,.1)"); svg.appendChild(p);
+    }
+    lista.forEach(([f, e]) => {
+      const a0 = Math.PI * acum / 350, a1 = Math.PI * (acum + e) / 350;
+      const p = document.createElementNS(NS, "path");
+      p.setAttribute("d", arco(r1, r2, a0, a1)); p.setAttribute("fill", col(f)); p.setAttribute("opacity", opacidad);
+      p.setAttribute("stroke", "#0d1320"); p.setAttribute("stroke-width", "2"); svg.appendChild(p);
+      if (e >= 14) { const m = (a0 + a1) / 2, r = (r1 + r2) / 2; texto(500 - r * Math.cos(m), 510 - r * Math.sin(m) + 12, e, r2 - r1 > 100 ? 40 : 28, 800); }
+      acum += e;
+    });
+  };
+  anillo(conEscano(a).filter((p) => p.e > 0).map((p) => [p.f, p.e]), 330, 490, 1);
+  anillo(ARCO2023, 205, 305, .8);
+  const l = document.createElementNS(NS, "line");
+  l.setAttribute("x1", 500); l.setAttribute("x2", 500); l.setAttribute("y1", 8); l.setAttribute("y2", 310);
+  l.setAttribute("stroke", "#fff"); l.setAttribute("stroke-width", 3); l.setAttribute("stroke-dasharray", "8 6"); svg.appendChild(l);
+  texto(500, 440, "Mayoría absoluta", 26, 600, "rgba(255,255,255,.66)");
+  texto(500, 500, "176", 60, 800);
+  texto(72, 536, "2026", 22, 700, "rgba(255,255,255,.66)");
+  texto(250, 536, "2023", 22, 700, "rgba(255,255,255,.66)");
+  return svg;
+}
+
+function tabla(cont, a, antes, max) {
+  cont.replaceChildren();
+  const lista = conEscano(a).filter((p) => p.e > 0 || p.v >= 0.02 * a.validos).slice(0, max);
+  if (!lista.length) { cont.appendChild(el("div", "vacio", "Todavía no hay votos contados.")); return; }
+  lista.forEach((p) => {
+    const f = el("div", "f");
+    const n = el("div", "nom", nom(p));
+    n.appendChild(el("small", null, num(p.v) + " votos"));
+    const e = el("div", "esc", String(p.e));
+    const d = delta(p, antes); if (d) { const s = el("small"); s.appendChild(d); s.append(antes ? " vs 2023" : " vs 2023"); e.appendChild(s); }
+    f.append(logo(p), n, el("div", "pct", dec(100 * p.v / a.validos, 1) + " %"), e);
+    cont.appendChild(f);
+  });
+}
+function cajas(cont, datos) {
+  cont.replaceChildren();
+  datos.forEach(([v, t]) => { const c = el("div", "caja"); c.append(el("b", null, v), el("span", null, t)); cont.appendChild(c); });
+}
+
+function pintarFaldon() {
+  const a = D.nacional, hay = a.escrutado > 0, av = a.avances || [];
+  if (hay) { $("#f-t").textContent = "Escrutado"; $("#f-n").textContent = dec(a.escrutado, 1) + " %"; }
+  else if (av[1] > 0 || av[0] > 0) { $("#f-t").textContent = "Participación " + (av[1] > 0 ? "18:00" : "14:00"); $("#f-n").textContent = dec(av[1] > 0 ? av[1] : av[0], 1) + " %"; }
+  else { $("#f-t").textContent = "Elecciones 29N"; $("#f-n").textContent = "20:00"; }
+  $("#f-h").textContent = hay && D.hora ? "Actualizado a las " + D.hora : hay ? "" : "Inicio del escrutinio";
+  const lista = conEscano(a).filter((p) => p.e > 0 || p.v >= 0.02 * a.validos);
+  const pista = $("#f-pista");
+  pista.replaceChildren();
+  const paginas = Math.max(1, Math.ceil(lista.length / 5));
+  lista.slice((pagina % paginas) * 5, (pagina % paginas) * 5 + 5).forEach((p, i) => {
+    const f = el("div", "ficha"); f.style.animationDelay = i * 70 + "ms";
+    const t = el("div");
+    const e = el("div", "esc", String(p.e));
+    const d = delta(p); if (d) { const s = el("small"); s.appendChild(d); e.appendChild(s); }
+    t.append(el("div", "nom", nom(p)), e, el("div", "pct", dec(100 * p.v / a.validos, 1) + " % de voto"));
+    f.append(logo(p), t);
+    pista.appendChild(f);
+  });
+  if (!lista.length) pista.appendChild(el("div", "ficha", ""));
+  $("#f-pie").textContent = (D.simulacro ? "SIMULACRO · " : "") + "Escaños · mayoría absoluta 176 · " + (paginas > 1 ? `${pagina % paginas + 1}/${paginas}` : "") + " · Fuente: Ministerio del Interior";
+}
+function pintarColumna() {
+  const a = D.nacional;
+  $("#c-t").textContent = D.simulacro ? "Simulacro · escrutado" : "Escrutado";
+  $("#c-n").textContent = dec(a.escrutado, 2) + " %";
+  $("#c-h").textContent = D.hora || "";
+  const cont = $("#c-filas");
+  cont.replaceChildren();
+  conEscano(a).filter((p) => p.e > 0).slice(0, 15).forEach((p) => {
+    const f = el("div", "fila"); f.style.background = col(p.f);
+    const d = delta(p);
+    const dd = el("div", "d"); if (d) { d.className = "delta"; dd.appendChild(d); } else dd.style.visibility = "hidden";
+    f.append(el("div", "n", nom(p)), el("div", "e", String(p.e)), dd);
+    cont.appendChild(f);
+  });
+  if (!cont.children.length) cont.appendChild(el("div", "vacio", "El escrutinio empieza a las 20:00"));
+}
+function pintarArco() {
+  const a = D.nacional;
+  $("#a-sello").hidden = !D.simulacro;
+  $("#a-h").textContent = a.escrutado > 0 && D.hora ? "Actualizado a las " + D.hora : "";
+  $("#a-svg").replaceChildren(hemiciclo(a));
+  cajas($("#a-cajas"), [[dec(a.escrutado, 2) + " %", "escrutado"], [a.escrutado > 0 ? dec(a.participacion_residentes, 2) + " %" : "—", "participación"],
+                        [num(a.validos), "votos válidos"]]);
+  tabla($("#a-tabla"), a, null, 9);
+}
+function pintarParticipacion() {
+  const a = D.nacional, av = a.avances || [0, 0];
+  $("#p-sello").hidden = !D.simulacro;
+  $("#p-h").textContent = "Fuente: Ministerio del Interior";
+  const cont = $("#p-dos");
+  cont.replaceChildren();
+  [["Avance de las 14:00", av[0]], ["Avance de las 18:00", av[1]]].forEach(([t, v]) => {
+    const c = el("div", "av" + (v > 0 ? "" : " pendiente"));
+    const n = el("div", "n", v > 0 ? dec(v, 1) : "—"); if (v > 0) n.appendChild(el("small", null, " %"));
+    const b = el("div", "b"); const i = el("i"); i.style.width = Math.min(100, v || 0) + "%"; b.appendChild(i);
+    c.append(el("div", "h", t), n, b);
+    cont.appendChild(c);
+  });
+  const m = a.mesas || {};
+  cajas($("#p-cajas"), [[m.total ? dec(100 * m.constituidas / m.total, 1) + " %" : "—", "mesas constituidas"],
+                        [m.total ? num(m.total) : "—", "mesas electorales"], [a.censo ? num(a.censo) : "—", "electores"]]);
+}
+function pintarProvincia() {
+  const cod = Q.get("provincia") || "28", a = D.provincias[cod];
+  if (!a) return;
+  $("#v-sello").hidden = !D.simulacro;
+  $("#v-titulo").replaceChildren(a.nombre + " ", el("b", null, a.escanos_total + " escaños"));
+  $("#v-h").textContent = a.escrutado > 0 && D.hora ? "Actualizado a las " + D.hora : "";
+  const u = $("#v-ultimo");
+  u.hidden = !(a.escrutado > 0 && a.ultimo && Number(a.ultimo.ultima) > 0);
+  if (!u.hidden) {
+    const sig = (c) => { const p = a.partidos.find((x) => Number(x.c) === Number(c)); return p ? nom(p) : "otra candidatura"; };
+    u.replaceChildren(el("b", null, "Último escaño: "), sig(a.ultimo.ultima) + ". ");
+    if (Number(a.ultimo.proxima) > 0) u.append("El siguiente sería para ", el("b", null, sig(a.ultimo.proxima)), `, a ${num(a.ultimo.faltan)} votos.`);
+  }
+  tabla($("#v-tabla"), a, null, 7);
+  cajas($("#v-cajas"), [[dec(a.escrutado, 2) + " %", "escrutado"], [a.escrutado > 0 ? dec(a.participacion_residentes, 2) + " %" : "—", "participación"],
+                        [num(a.validos), "votos válidos"]]);
+}
+const PINTAR = { faldon: pintarFaldon, columna: pintarColumna, arco: pintarArco, participacion: pintarParticipacion, provincia: pintarProvincia };
+
+async function cargar() {
+  try {
+    const r = await fetch(ORIGEN, { cache: "no-store" });
+    if (!r.ok) return;
+    const txt = await r.text();
+    if (txt === firma) return;          // sin cambios: no se repinta (evita parpadeos en emisión)
+    firma = txt; D = JSON.parse(txt);
+    (PINTAR[VISTA] || pintarArco)();
+  } catch (e) { /* se mantiene lo último que se pintó */ }
+}
+cargar();
+setInterval(cargar, 15000);
+if (VISTA === "faldon") setInterval(() => { if (D) { pagina++; pintarFaldon(); } }, PASO);
+</script>
+</body>
+</html>
