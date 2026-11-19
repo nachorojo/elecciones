@@ -122,3 +122,38 @@ def test_captura_de_un_envio_guardado(base, tmp_path):
 def test_margen_segun_lo_escrutado():
     assert P.margen(2)["escanos_media"] > P.margen(30)["escanos_media"] > P.margen(90)["escanos_media"]
     assert P.margen(10)["escanos_max"] >= 8
+
+
+def test_no_se_publica_un_recuento_que_retrocede(base, tmp_path):
+    """Simulacro del 18-N: con el 85 % escrutado llegó un envío de totales a cero. No debe pisar la página."""
+    envio = tmp_path / "envio_8_20261118-183300"
+    _noche_ficticia(base, envio)
+    web = tmp_path / "vivo.json"
+    K.capturar(K.Guardado(envio), "8", tmp_path, base["provincias"], None, simulacro=True, salida_web=web, guardar_bruto=False)
+    antes = web.read_text(encoding="utf-8")
+    regs = E.leer_totales((envio / "totales.csv").read_text(encoding="utf-8"))
+    for r in regs:
+        r.update(censo_escrutado=0, pct_escrutado=0, votantes=0, blancos=0, partidos=[])
+    (envio / "totales.csv").write_text(E.escribir_totales(regs), encoding="utf-8")
+    r = K.capturar(K.Guardado(envio), "9", tmp_path, base["provincias"], None, simulacro=True, salida_web=web, guardar_bruto=False)
+    assert any("retrocede" in f for f in r["fallos"]) and web.read_text(encoding="utf-8") == antes
+    # Una sesión real (no simulacro) sí empieza de cero aunque el fichero publicado sea el del simulacro.
+    K.capturar(K.Guardado(envio), "1", tmp_path, base["provincias"], None, simulacro=False, salida_web=web, guardar_bruto=False)
+    assert json.loads(web.read_text(encoding="utf-8"))["nacional"]["escrutado"] == 0
+
+
+def test_los_envios_se_guardan_comprimidos_y_se_releen(base, tmp_path):
+    origen = tmp_path / "envio_5_20261118-180000"
+    _noche_ficticia(base, origen)
+    K.capturar(K.Guardado(origen), "5", tmp_path / "copia", ["28", "52"], None, salida_web=tmp_path / "v.json")
+    guardado = next((tmp_path / "copia").iterdir())
+    assert sorted(f.name for f in guardado.iterdir()) == ["municipios_28.csv.gz", "municipios_52.csv.gz", "totales.csv.gz"]
+    assert K.Guardado(guardado).totales("5") == (origen / "totales.csv").read_bytes()
+    assert (guardado / "municipios_28.csv.gz").stat().st_size < (origen / "municipios_28.csv").stat().st_size / 10
+
+
+def test_siglas_reales_del_simulacro():
+    from pipeline.convocatoria_29n import espacio
+    casos = {"PAZ,CASA Y TRABAJO": "PODEMOS", "UPN-PP": "PP", "CCa-1ºCAN": "CC", "EH BILDU-ERC": "EH_BILDU", "JxCat": "JUNTS",
+             "NC-BC, PODEMOS, IU, SUMAR": "NC", "COMPROMIS-EUPV-PODEM-ERPV": "COMPROMIS", "EAJ-PNV": "PNV", "FO": "OTROS"}
+    assert {s: espacio("", s) for s in casos} == casos

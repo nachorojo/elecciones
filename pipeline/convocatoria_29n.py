@@ -161,7 +161,7 @@ _REGLAS = [
     ("NC", r"\bnc-bc\b|nueva canarias"),
     ("ADELANTE", r"adelante andalucia"),
     ("FA", r"frente amplio|front ampli|fronte ampl|fronte zabala|\bfa\b|arames|\bcomuns\b"),
-    ("PODEMOS", r"podemos|\bpodem\b"),
+    ("PODEMOS", r"podemos|\bpodem\b|paz, ?casa y trabajo"),   # «PAZ,CASA Y TRABAJO»: siglas de Podemos en Ceuta
     ("EH_BILDU", r"bildu"),
     ("ERC", r"\berc\b|esquerra republicana"),
     ("JUNTS", r"jxcat|junts"),

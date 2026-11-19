@@ -10,7 +10,8 @@ Variables de entorno: ELECCIONES_API_URL, ELECCIONES_API_USER, ELECCIONES_API_PA
 Las credenciales NO se escriben en ningún fichero ni se suben a la repo.
 
 Qué guarda, en --carpeta (por defecto ../datos/29n_envios, fuera de la repo):
-    envio_<número>_<AAAAMMDD-HHMMSS>/totales.csv, avances.csv, municipios_NN.csv   ficheros de Interior, sin tocar
+    envio_<número>_<AAAAMMDD-HHMMSS>/totales.csv.gz, avances.csv.gz, municipios_NN.csv.gz   ficheros de Interior,
+                                                                                   comprimidos (gzip), sin modificar
     envio_<...>/proyeccion.json                                                    estimación propia (no se publica)
     registro.csv                                                                   una línea por envío capturado
 Y en la repo: web/data/vivo_29n.json (lo que pinta la página).
@@ -19,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import gzip
 import json
 import subprocess
 import time
@@ -41,14 +43,18 @@ class Guardado:
     def envio(self) -> str:
         return self.carpeta.name.split("_")[1] if "_" in self.carpeta.name else "0"
 
+    def _leer(self, nombre: str) -> bytes:
+        f = self.carpeta / nombre
+        return f.read_bytes() if f.exists() else gzip.decompress((self.carpeta / (nombre + ".gz")).read_bytes())
+
     def totales(self, envio: str) -> bytes:
-        return (self.carpeta / "totales.csv").read_bytes()
+        return self._leer("totales.csv")
 
     def municipios(self, prov: str, envio: str) -> bytes:
-        return (self.carpeta / f"municipios_{prov}.csv").read_bytes()
+        return self._leer(f"municipios_{prov}.csv")
 
     def avances(self, envio: str) -> bytes:
-        return (self.carpeta / "avances.csv").read_bytes()
+        return self._leer("avances.csv")
 
 
 def capturar(cliente, envio: str, carpeta: Path, provincias: list[str], base: dict | None,
@@ -66,15 +72,22 @@ def capturar(cliente, envio: str, carpeta: Path, provincias: list[str], base: di
             fallos.append(f"{nombre}: {e}")
             return None
         if guardar_bruto:
-            (destino / nombre).write_bytes(datos)
+            # Comprimido: los 52 ficheros de municipios ocupan unos 50 MB por envío sin comprimir.
+            (destino / (nombre + ".gz")).write_bytes(gzip.compress(datos, 6))
         return datos
 
     resumen = {"envio": envio, "capturado": f"{ahora:%Y-%m-%d %H:%M:%S}", "carpeta": str(destino)}
     tot = traer("totales.csv", lambda: cliente.totales(envio))
     if tot:
         web = E.a_web(E.leer_totales(E.texto(tot)), simulacro=simulacro)
-        E.guardar(web, salida_web)
         n = web["nacional"]
+        # En el simulacro del 18-N un envío de totales llegó a cero con el recuento al 85 %. Si el recuento
+        # retrocede respecto a lo ya publicado, no se pisa la página: se anota y se espera al siguiente.
+        previo = _escrutado_publicado(salida_web, simulacro)
+        if n["escrutado"] < previo:
+            fallos.append(f"totales.csv: el recuento retrocede ({previo} % -> {n['escrutado']} %); no se publica")
+        else:
+            E.guardar(web, salida_web)
         resumen |= {"hora_interior": web["hora"], "escrutado": n["escrutado"],
                     "escanos": {p["s"]: p["e"] for p in n["partidos"] if p["e"]}, "avisos": web["avisos"]}
     traer("avances.csv", lambda: cliente.avances(envio))
@@ -94,6 +107,15 @@ def capturar(cliente, envio: str, carpeta: Path, provincias: list[str], base: di
                     "escrutado_municipios": proy["escrutado"]}
     resumen["fallos"] = fallos
     return resumen
+
+
+def _escrutado_publicado(fichero: Path, simulacro: bool) -> float:
+    """% escrutado del fichero que ya lee la web (0 si no existe, está vacío o es de otro tipo de sesión)."""
+    try:
+        d = json.loads(fichero.read_text(encoding="utf-8"))
+        return float(d["nacional"]["escrutado"]) if bool(d.get("simulacro")) == simulacro else 0.0
+    except (OSError, ValueError, KeyError):
+        return 0.0
 
 
 def publicar(fichero: Path, mensaje: str) -> str:
