@@ -194,8 +194,21 @@ def _hora(fecha: str) -> str:
 
 def _ambito(r: dict, nombre: str | None = None) -> dict:
     cand = sum(p["v"] for p in r["partidos"])
-    partidos = sorted(({"c": p["c"], "s": p["s"], "f": espacio_api(p["c"], p["s"]), "v": p["v"], "e": p["e"]}
-                       for p in r["partidos"] if p["v"] > 0 or p["e"] > 0), key=lambda p: (-p["e"], -p["v"]))
+    # Las candidaturas de un mismo espacio se suman en una fila (PP + UPN-PP, EH BILDU + EH BILDU-ERC, PSOE + PSC…):
+    # Interior las da separadas en el total nacional. Las de OTROS no se mezclan entre sí. La fila conserva las
+    # siglas y el código de la candidatura con más votos, y en `incluye` las siglas de las demás.
+    filas: dict[str, dict] = {}
+    for p in sorted(r["partidos"], key=lambda p: -p["v"]):
+        if not (p["v"] > 0 or p["e"] > 0):
+            continue
+        f = espacio_api(p["c"], p["s"])
+        clave = f if f != "OTROS" else "OTROS:" + p["c"]
+        if clave in filas:
+            filas[clave]["v"] += p["v"]; filas[clave]["e"] += p["e"]
+            filas[clave].setdefault("incluye", []).append(p["s"])
+        else:
+            filas[clave] = {"c": p["c"], "s": p["s"], "f": f, "v": p["v"], "e": p["e"]}
+    partidos = sorted(filas.values(), key=lambda p: (-p["e"], -p["v"]))
     return {"nombre": nombre or r["nombre"], "censo": r["censo"], "censo_escrutado": r["censo_escrutado"],
             "escrutado": r["pct_escrutado"], "votantes": r["votantes"], "blancos": r["blancos"], "nulos": r["nulos"],
             "candidaturas": cand, "validos": cand + r["blancos"], "escanos_total": r["diputados"],

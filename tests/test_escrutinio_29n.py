@@ -88,6 +88,12 @@ def test_totales_reales_del_simulacro():
         esc[p["f"]] = esc.get(p["f"], 0) + p["e"]
     assert {k: v for k, v in esc.items() if v} == {"PP": 137, "PSOE": 126, "VOX": 34, "FA": 27, "ERC": 7, "JUNTS": 6,
                                                    "PNV": 5, "EH_BILDU": 5, "NC": 2, "BNG": 1}
+    # Una fila por espacio: PP suma el escaño de UPN-PP, y EH Bildu los votos de la lista «EH BILDU-ERC» de Navarra.
+    pp = next(p for p in n["partidos"] if p["f"] == "PP")
+    assert (pp["s"], pp["e"], pp["v"], pp["incluye"]) == ("PP", 137, 8_102_993 + 65_135, ["UPN-PP"])
+    bildu = next(p for p in n["partidos"] if p["f"] == "EH_BILDU")
+    assert (bildu["e"], bildu["v"], bildu["incluye"]) == (5, 270_073 + 8_234, ["EH BILDU-ERC"])
+    assert sum(1 for p in n["partidos"] if p["f"] == "COMPROMIS") == 1 and len([p for p in n["partidos"] if p["f"] == "OTROS"]) > 20
     assert n["avances"] == [40.4, 53.1] and n["mesas"] == {"total": 61033, "constituidas": 61033}
     m = web["provincias"]["28"]
     assert m["escanos_total"] == 38 and m["avances"] == [41.14, 53.93]

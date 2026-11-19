@@ -249,7 +249,9 @@ function pintarDetalle() {
       const d = p.e - (antes[p.f] || 0);
       esc.append(" ", el("small", d > 0 ? "sube" : d < 0 ? "baja" : null, d > 0 ? `▲${d}` : d < 0 ? `▼${-d}` : "="));
     }
-    f.append(el("div", null, p.s), barra,
+    const nombre = el("div", null, p.s);
+    if (p.incluye) nombre.title = "Incluye: " + p.incluye.join(", ");
+    f.append(nombre, barra,
              el("div", "cifras", `${num(p.v)} · ${dec(100 * p.v / a.validos, 2)} %`), esc);
     lista.appendChild(f);
   });
