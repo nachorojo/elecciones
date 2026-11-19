@@ -25,6 +25,8 @@ const ETIQUETA = {
 const ESPACIO_2023 = { PP: "PP", UPN: "PP", PSOE: "PSOE", VOX: "VOX", ERC: "ERC", CIU_JXCAT: "JUNTS",
   EH_BILDU: "EH_BILDU", PNV: "PNV", BNG: "BNG", CC: "CC" };
 const DEMO = new URLSearchParams(location.search).has("demo");
+// ?simulacro: último envío del simulacro de Interior del 18-N-2026 (datos ficticios, rotulados), para ver la página con recuento.
+const SIMU = new URLSearchParams(location.search).has("simulacro");
 const CFG = Object.assign({ vivo: "data/vivo_29n.json", refresco: 30 }, window.CONFIG || {});
 
 const $ = (s) => document.querySelector(s);
@@ -318,10 +320,11 @@ function cambiarVista(v) {
   else pintar();
 }
 
-/* 29N: data/vivo_29n.json (pipeline/escrutinio_29n.py); con ?demo, el fichero de PRUEBA. Se vuelve a pedir cada 30 s. */
+/* 29N: data/vivo_29n.json (pipeline/escrutinio_29n.py); con ?demo, el fichero de PRUEBA; con ?simulacro, el del
+   simulacro de Interior. Se vuelve a pedir cada 30 s. */
 async function cargarVivo(primera) {
   try {
-    const r = await fetch(DEMO ? "data/demo_29n.json" : CFG.vivo, { cache: "no-store" });
+    const r = await fetch(DEMO ? "data/demo_29n.json" : SIMU ? "data/simulacro_29n.json" : CFG.vivo, { cache: "no-store" });
     if (!r.ok) return;
     const e = await r.json();
     const i = DATOS.elecciones.findIndex((x) => x.id === "2026");

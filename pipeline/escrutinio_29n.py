@@ -32,6 +32,8 @@ from .convocatoria_29n import espacio
 WEB = C.REPO / "web" / "data"
 VIVO = WEB / "vivo_29n.json"
 DEMO = WEB / "demo_29n.json"
+SIMULACRO = WEB / "simulacro_29n.json"          # último envío del simulacro de Interior (18-N-2026); se ve con ?simulacro
+DATOS_SIMULACRO = C.REPO / "tests" / "datos" / "simulacro"
 CONV = C.REPO / "data" / "web" / "29n"
 FECHA = "29 de noviembre de 2026"
 N_CAND = 80
@@ -348,6 +350,12 @@ def descargar() -> str:
     return texto(c.totales(c.envio()))
 
 
+def simulacro_web() -> dict:
+    """Último envío del simulacro del 18 de noviembre (ficheros reales de Interior, datos ficticios)."""
+    return a_web(leer_totales(texto((DATOS_SIMULACRO / "totales.csv").read_bytes())), simulacro=True,
+                 avances=leer_avances(texto((DATOS_SIMULACRO / "avances.csv").read_bytes())))
+
+
 def guardar(datos: dict, salida: Path) -> Path:
     salida.write_text(json.dumps(datos, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     return salida
@@ -358,9 +366,12 @@ if __name__ == "__main__":
     ap.add_argument("fichero", nargs="?")
     ap.add_argument("--vacio", action="store_true")
     ap.add_argument("--demo", action="store_true")
+    ap.add_argument("--simulacro-web", action="store_true", help="regenera web/data/simulacro_29n.json")
     ap.add_argument("--descargar", action="store_true")
     a = ap.parse_args()
-    if a.demo:
+    if a.simulacro_web:
+        print(guardar(simulacro_web(), SIMULACRO))
+    elif a.demo:
         print(guardar(a_web(leer_totales(demo()), prueba=True), DEMO))
     elif a.vacio:
         print(guardar(vacio(), VIVO))

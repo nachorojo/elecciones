@@ -123,3 +123,9 @@ def test_candidaturas_de_la_api_por_codigo():
     assert all(E.espacio_api(r["codigo"], "") == espacio(r["denominacion"], r["siglas"]) for r in filas)
     assert E.espacio_api("0041", "") == "PSOE" and E.espacio_api("0152", "") == "PODEMOS" and E.espacio_api("0045", "") == "FA"
     assert E.espacio_api("9999", "VOX") == "VOX"                 # código desconocido: se cae a las siglas
+
+
+def test_fichero_del_simulacro_para_la_web_al_dia():
+    """web/data/simulacro_29n.json (se ve con ?simulacro) sale de los ficheros reales y va rotulado."""
+    web = json.loads(E.SIMULACRO.read_text(encoding="utf-8"))
+    assert web == json.loads(json.dumps(E.simulacro_web())) and web["simulacro"] is True
