@@ -106,7 +106,7 @@ data/web/                    clasificación de candidaturas de Mikel (usada para
   noche.py                   proyección del resultado final con recuento parcial + backtest con recuentos simulados
   escrutinio_29n.py          lee la API de descargas de Interior (noche electoral) → web/data/vivo_29n.json
   simulador.py               ajuste territorial (IPF) + d'Hondt, backtest y web/data/simulador.json
-tests/                       108 tests (se saltan solos si faltan los datos; los del 29N y el simulador no)
+tests/                       114 tests (se saltan solos si faltan los datos; los del 29N y el simulador no)
 ```
 
 ## 6. Estado de la web (`web/`)

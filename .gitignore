@@ -6,6 +6,7 @@ data/clean/
 *.csv
 *.parquet
 !data/web/**/*.csv
+!tests/datos/**/*.csv
 
 # Python / entornos
 __pycache__/

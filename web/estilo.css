@@ -141,4 +141,5 @@ button.secundario {
 .mapa-prov .prov:hover { filter: brightness(1.12); }
 .mapa-prov .prov.activa, .mapa-prov .prov:focus-visible { stroke: var(--texto); stroke-width: 2; }
 .marco-canarias { fill: none; stroke: var(--borde); stroke-width: 1; }
+.ultimo { margin: 0 0 14px; padding: 10px 12px; border-radius: 10px; background: var(--acento-suave); font-size: 14px; }
 [hidden] { display: none !important; }

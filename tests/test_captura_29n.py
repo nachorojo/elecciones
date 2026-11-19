@@ -64,7 +64,7 @@ def _noche_ficticia(b, carpeta, semilla=3):
     f = np.where(b["censo"] < 20_000, 1.0, rng.choice([0.0, 0.3, 0.6], size=len(validos)))
     contado = np.round(final * f[:, None])
     esc_final = N.escanos(N._por_provincia({"provincias": b["provincias"], "prov": b["prov"]}, final), b["n_escanos"])
-    cod = {e: f"{i:04d}" for i, e in enumerate(b["espacios"])}
+    cod = E.CODIGO
     regs = {p: [] for p in b["provincias"]}
     for i, mid in enumerate(b["municipios"]):
         if f[i] <= 0:

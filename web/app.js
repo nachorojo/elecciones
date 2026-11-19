@@ -202,7 +202,15 @@ function pintarDetalle() {
   if (!seleccion) hemi.appendChild(hemiciclo(e, DATOS.elecciones[DATOS.elecciones.indexOf(e) - 1]));
   const r = $("#resumen");
   r.replaceChildren();
-  (vivo
+  // 29N antes del escrutinio: constitución de mesas y avances de participación (14:00 y 18:00), si ya han llegado.
+  const av = vivo && !(a.escrutado > 0) && a.avances ? a.avances : null;
+  const horas = e.simulacro ? ["1.er avance", "2.º avance"] : ["a las 14:00", "a las 18:00"];
+  (av
+    ? [[a.mesas && a.mesas.total ? dec(100 * a.mesas.constituidas / a.mesas.total, 1) + " %" : "—", "mesas constituidas"],
+       [av[0] > 0 ? dec(av[0], 2) + " %" : "—", "participación " + horas[0]],
+       [av[1] > 0 ? dec(av[1], 2) + " %" : "—", "participación " + horas[1]],
+       [num(a.censo), "electores"]]
+    : vivo
     ? [[dec(a.escrutado, 2) + " %", "escrutado (censo)"],
        [a.escrutado > 0 ? dec(a.participacion_residentes, 2) + " %" : "—", "participación"],
        [num(a.validos), "votos válidos contados"],
@@ -229,7 +237,7 @@ function pintarDetalle() {
   }
   const comparables = new Set(Object.values(ESPACIO_2023));
   const filas = vivo ? [...a.partidos].sort((x, y) => y.e - x.e || y.v - x.v) : a.partidos;
-  if (!filas.length) lista.appendChild(el("p", "nota", "Todavía no hay votos contados. Mientras tanto, el anillo interior muestra el reparto de 2023."));
+  if (!filas.length) lista.appendChild(el("p", "nota", "Todavía no hay votos contados. " + (seleccion ? "" : "Mientras tanto, el anillo interior muestra el reparto de 2023.")));
   filas.slice(0, vivo ? 16 : 12).forEach((p) => {
     const f = el("div", "fila");
     const barra = el("div", "barra");
@@ -250,6 +258,15 @@ function pintarDetalle() {
   $("#otros").textContent = !a.validos ? "" :
     `Resto de candidaturas: ${num(resto)} votos · en blanco: ${num(a.blancos)} (${dec(100 * a.blancos / a.validos, 2)} % de los válidos) · nulos: ${num(a.nulos)}.` +
     (vivo ? " ▲▼: diferencia de escaños con 2023 (PP se compara con PP + UPN; el espacio de Sumar concurre dividido y no se compara)." : "");
+  // Último escaño de la provincia: quién lo tiene, quién va detrás y cuántos votos le faltan (dato de Interior).
+  const ult = $("#ultimo");
+  ult.hidden = true;
+  if (vivo && seleccion && a.escrutado > 0 && a.ultimo && Number(a.ultimo.ultima) > 0) {
+    const sig = (c) => (a.partidos.find((p) => Number(p.c) === Number(c)) || { s: "otra candidatura" }).s;
+    ult.replaceChildren(el("strong", null, "Último escaño: "), `lo tiene ${sig(a.ultimo.ultima)}.` +
+      (Number(a.ultimo.proxima) > 0 ? ` El siguiente sería para ${sig(a.ultimo.proxima)}, que necesita ${num(a.ultimo.faltan)} votos más.` : ""));
+    ult.hidden = false;
+  }
   const h = $("#historia");
   h.replaceChildren();
   DATOS.elecciones.forEach((x) => {
@@ -281,7 +298,7 @@ function cambiarVista(v) {
   document.querySelector(".rejilla").classList.toggle("vista-mun", v === "mun" || v === "sec");
   document.querySelector(".rejilla").classList.toggle("vista-sim", v === "sim");
   $("#bloque-sim").hidden = v !== "sim";
-  if (v !== "prov") { $("#hemiciclo").hidden = true; $("#aviso-prueba").hidden = true; $("#aviso-simulacro").hidden = true; }
+  if (v !== "prov") { $("#hemiciclo").hidden = true; $("#aviso-prueba").hidden = true; $("#aviso-simulacro").hidden = true; $("#ultimo").hidden = true; }
   $("#aviso-sim").hidden = v !== "sim";
   $("#aviso-datos").hidden = v === "sim";
   $("#etq-eleccion").hidden = v === "sim";

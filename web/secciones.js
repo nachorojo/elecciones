@@ -5,7 +5,7 @@
 const Seccion = (() => {
   /* Nombres de los distritos censales (el INE solo da el número). Solo las ciudades donde el distrito censal
      coincide con el distrito municipal, comprobado con la posición de cada distrito en la cartografía de 2019 y 2023.
-     Málaga y Zaragoza no están: su numeración censal no coincide con la de sus distritos municipales. */
+     Interior usa esos mismos números y nombres en sus ficheros (confirmado con el simulacro del 18-N-2026). */
   const DISTRITOS = {
     "28079": ["Centro", "Arganzuela", "Retiro", "Salamanca", "Chamartín", "Tetuán", "Chamberí", "Fuencarral-El Pardo",
       "Moncloa-Aravaca", "Latina", "Carabanchel", "Usera", "Puente de Vallecas", "Moratalaz", "Ciudad Lineal", "Hortaleza",
@@ -17,7 +17,12 @@ const Seccion = (() => {
       "Pobles del Nord", "Pobles de l'Oest", "Pobles del Sud"],
     "41091": ["Casco Antiguo", "Macarena", "Nervión", "Cerro-Amate", "Sur", "Triana", "Norte", "San Pablo-Santa Justa",
       "Este-Alcosa-Torreblanca", "Bellavista-La Palmera", "Los Remedios"],
-    "48020": ["Deusto", "Uribarri", "Otxarkoaga-Txurdinaga", "Begoña", "Ibaiondo", "Abando", "Errekalde", "Basurto-Zorrotza"]
+    "48020": ["Deusto", "Uribarri", "Otxarkoaga-Txurdinaga", "Begoña", "Ibaiondo", "Abando", "Errekalde", "Basurto-Zorrotza"],
+    // Málaga y Zaragoza: nombres de los distritos censales según los ficheros de Interior (simulacro del 18-N-2026).
+    "29067": ["Centro", "Málaga-Este", "Carretería y Álamos", "Victoria", "La Merced", "Ciudad Jardín", "Málaga-Norte",
+      "Ronda Intermedia-Campanillas", "Málaga-Oeste", "Carretera de Cádiz", "Churriana"],
+    "50297": ["Casco Viejo", "Centro", "Delicias", "Universidad", "San José", "Las Fuentes", "Aljafería", "Vía Hispanidad",
+      "Torrero", "Actur-Arrabal", "Barrios Zona Norte", "Barrios Zona Oeste"]
   };
   const distrito = (s) => {
     const n = (DISTRITOS[s.slice(0, 5)] || [])[Number(s.slice(5, 7)) - 1];

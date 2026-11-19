@@ -24,7 +24,7 @@ import numpy as np
 
 from . import config as C
 from . import noche as N
-from .convocatoria_29n import espacio
+from .escrutinio_29n import espacio_api
 from .simulador import HEREDA_2023, HEREDEROS_IZQ, ORDEN
 
 CONV = C.REPO / "data" / "web" / "29n"
@@ -134,7 +134,7 @@ def proyectar_registros(registros: list[dict], b: dict | None = None) -> dict:
             censo[i] = r["censo"]            # el censo de las mesas que da Interior manda sobre el del INE
         cc[i] = r["censo_escrutado"]
         for p in r["partidos"]:
-            contado[i, COL.get(espacio("", p["s"]), 0)] += p["v"]
+            contado[i, COL.get(espacio_api(p["c"], p["s"]), 0)] += p["v"]
         contado[i, 0] += r["blancos"]
     base = b["base"] * (censo / b["censo"])[:, None]
     y = N.proyectar(base, censo, cc, contado, b["prov"], b["tramo"])

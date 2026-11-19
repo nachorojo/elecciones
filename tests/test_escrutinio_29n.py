@@ -12,10 +12,10 @@ def _registro(**kw):
     base = {"fecha": "2611292114", "tipo": "PR", "ccaa": "13", "prov": "28", "fijo": "9", "nombre": "Madrid",
             "mesas": 7000, "censo": 5000000, "censo_escrutado": 2500000, "pct_escrutado": 50.0, "votantes": 1700000,
             "pct_votantes": 68.0, "abstencion": 800000, "pct_abstencion": 32.0, "blancos": 12000, "pct_blancos": 0.71,
-            "nulos": 15000, "pct_nulos": 0.88, "diputados": 38, "cod_ultima": "0002", "cod_proxima": "0001",
+            "nulos": 15000, "pct_nulos": 0.88, "diputados": 38, "cod_ultima": "0001", "cod_proxima": "0007",
             "votos_faltan": 1234,
-            "partidos": [{"c": "0001", "s": "PP", "v": 700000, "e": 16}, {"c": "0002", "s": "PSOE", "v": 500000, "e": 11},
-                         {"c": "0007", "s": "FRENTE AMPLIO-FRONTE ZABALA", "v": 90000, "e": 2}]}
+            "partidos": [{"c": "0007", "s": "PP", "v": 700000, "e": 16}, {"c": "0001", "s": "PSOE", "v": 500000, "e": 11},
+                         {"c": "0072", "s": "FRENTE AMPLIO-FRONTE ZABALA", "v": 90000, "e": 2}]}
     return base | kw
 
 
@@ -35,7 +35,7 @@ def test_ida_y_vuelta():
     assert (r["tipo"], r["prov"], r["nombre"], r["diputados"]) == ("PR", "28", "Madrid", 38)
     assert r["pct_escrutado"] == 50.0 and r["pct_blancos"] == 0.71 and r["votos_faltan"] == 1234
     assert [(p["c"], p["s"], p["v"], p["e"]) for p in r["partidos"]] == [
-        ("0001", "PP", 700000, 16), ("0002", "PSOE", 500000, 11), ("0007", "FRENTE AMPLIO-FRONTE ZABALA", 90000, 2)]
+        ("0007", "PP", 700000, 16), ("0001", "PSOE", 500000, 11), ("0072", "FRENTE AMPLIO-FRONTE ZABALA", 90000, 2)]
 
 
 def test_salida_para_la_web():
@@ -47,7 +47,7 @@ def test_salida_para_la_web():
     assert m["validos"] == 700000 + 500000 + 90000 + 12000
     assert m["participacion_residentes"] == 68.0
     assert [(p["s"], p["f"]) for p in m["partidos"]] == [("PP", "PP"), ("PSOE", "PSOE"), ("FRENTE AMPLIO-FRONTE ZABALA", "FA")]
-    assert m["ultimo"] == {"ultima": "0002", "proxima": "0001", "faltan": 1234}
+    assert m["ultimo"] == {"ultima": "0001", "proxima": "0007", "faltan": 1234}
 
 
 def test_avisa_si_los_escanos_no_coinciden_con_el_boe():
@@ -69,3 +69,51 @@ def test_fichero_vacio_y_demo():
 def test_ficheros_de_la_web_al_dia():
     assert json.loads(E.VIVO.read_text(encoding="utf-8")) == json.loads(json.dumps(E.vacio()))
     assert json.loads(E.DEMO.read_text(encoding="utf-8"))["prueba"] is True
+
+
+# --- Ficheros REALES del simulacro de Interior (18 de noviembre de 2026), en tests/datos/simulacro/ -------------
+
+SIM = E.C.REPO / "tests" / "datos" / "simulacro"
+
+
+def test_totales_reales_del_simulacro():
+    r = E.leer_totales(E.texto((SIM / "totales.csv").read_bytes()))
+    assert [x["tipo"] for x in r].count("PR") == 52 and [x["tipo"] for x in r].count("CM") == 19 and r[0]["tipo"] == "TO"
+    web = E.a_web(r, simulacro=True, avances=E.leer_avances(E.texto((SIM / "avances.csv").read_bytes())))
+    n = web["nacional"]
+    assert web["hora"] == "21:26" and web["avisos"] == [] and web["simulacro"] is True
+    assert n["escrutado"] == 98.54 and n["censo"] == 35_953_653 and n["escanos_total"] == 350
+    esc = {}
+    for p in n["partidos"]:
+        esc[p["f"]] = esc.get(p["f"], 0) + p["e"]
+    assert {k: v for k, v in esc.items() if v} == {"PP": 137, "PSOE": 126, "VOX": 34, "FA": 27, "ERC": 7, "JUNTS": 6,
+                                                   "PNV": 5, "EH_BILDU": 5, "NC": 2, "BNG": 1}
+    assert n["avances"] == [40.4, 53.1] and n["mesas"] == {"total": 61033, "constituidas": 61033}
+    m = web["provincias"]["28"]
+    assert m["escanos_total"] == 38 and m["avances"] == [41.14, 53.93]
+    assert m["ultimo"] == {"ultima": "0007", "proxima": "0006", "faltan": 40925}          # último PP; Vox a 40.925 votos
+    assert all(sum(p["e"] for p in a["partidos"]) == a["escanos_total"] for a in web["provincias"].values())
+
+
+def test_municipios_reales_del_simulacro():
+    bilbao = [x for x in E.leer_municipios(E.texto((SIM / "municipios_48.csv").read_bytes())) if x["id"] == "48020"]
+    assert [x["nombre"] for x in bilbao if x["distrito"] != "99"] == [
+        "Deusto", "Uribarri", "Otxarkoaga/Txurdinaga", "Begoña", "Ibaiondo", "Abando", "Rekalde", "Basurto/Zorroza"]
+    mun = next(x for x in bilbao if x["distrito"] == "99")
+    assert mun["censo"] == sum(x["censo"] for x in bilbao if x["distrito"] != "99") == 268_669
+    # Antes del escrutinio el fichero ya trae las candidaturas de la circunscripción, a cero.
+    melilla = E.leer_municipios(E.texto((SIM / "municipios_52.csv").read_bytes()))
+    assert len(melilla) == 1 and melilla[0]["censo_escrutado"] == 0
+    assert [p["s"] for p in melilla[0]["partidos"]] == ["PSOE", "FO", "SALF", "VOX", "PP"]
+
+
+def test_candidaturas_de_la_api_por_codigo():
+    """El código manda sobre las siglas, y ambos caminos clasifican igual las 81 candidaturas del fichero oficial."""
+    import csv
+    from pipeline.convocatoria_29n import espacio
+    with open(E.CONV / "candidaturas_api_2026.csv", encoding="utf-8", newline="") as fh:
+        filas = list(csv.DictReader(fh))
+    assert len(filas) == 81
+    assert all(E.espacio_api(r["codigo"], "") == espacio(r["denominacion"], r["siglas"]) for r in filas)
+    assert E.espacio_api("0041", "") == "PSOE" and E.espacio_api("0152", "") == "PODEMOS" and E.espacio_api("0045", "") == "FA"
+    assert E.espacio_api("9999", "VOX") == "VOX"                 # código desconocido: se cae a las siglas

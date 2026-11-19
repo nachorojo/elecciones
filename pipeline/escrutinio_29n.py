@@ -50,6 +50,49 @@ CAMPOS_MUN = [("fecha", 10), ("ccaa", 2), ("prov", 2), ("fijo", 1), ("mun", 3), 
 CAND_MUN = 4
 
 
+# Código de agrupación de la API de Interior (fichero getCandidaturas/2) -> espacio. Lo que no está, OTROS.
+AGRUPACION = {"0001": "PSOE", "0007": "PP", "0067": "PP", "0006": "VOX", "0003": "SALF", "0012": "PODEMOS", "0013": "FA",
+              "0004": "ADELANTE", "0005": "PACMA", "0042": "JUNTS", "0043": "ERC", "0133": "EH_BILDU", "0063": "EH_BILDU",
+              "0070": "PNV", "0109": "BNG", "0028": "CC", "0030": "NC", "0077": "COMPROMIS", "0021": "TERUEL_EXISTE",
+              "0066": "GBAI"}
+# Código principal de cada espacio en la API (para fabricar ficheros de prueba coherentes con los reales).
+CODIGO = {"PSOE": "0001", "PP": "0007", "VOX": "0006", "SALF": "0003", "PODEMOS": "0012", "FA": "0013", "ADELANTE": "0004",
+          "JUNTS": "0042", "ERC": "0043", "EH_BILDU": "0133", "PNV": "0070", "BNG": "0109", "CC": "0028", "NC": "0030",
+          "COMPROMIS": "0077", "TERUEL_EXISTE": "0021", "GBAI": "0066"}
+_COD: dict[str, str] = {}
+
+
+def espacio_api(codigo: str, siglas: str) -> str:
+    """Espacio de una candidatura de la API: por su código (vía agrupación) y, si no se conoce, por las siglas."""
+    if not _COD:
+        f = CONV / "candidaturas_api_2026.csv"
+        if f.exists():
+            with open(f, encoding="utf-8", newline="") as fh:
+                _COD.update({r["codigo"]: AGRUPACION.get(r["agrupacion"], "OTROS") for r in csv.DictReader(fh)})
+        _COD.setdefault("", "OTROS")
+    return _COD.get(codigo.strip().rjust(4, "0")) or espacio("", siglas)
+
+
+CAMPOS_AV = ["fecha", "tipo", "ccaa", "prov", "fijo", "nombre", "mesas", "mesas_constituidas", "mesas_suspendidas", "censo",
+             "censo_constituidas", "censo_suspendidas"]
+
+
+def leer_avances(texto: str) -> list[dict]:
+    """Registros de getAvancesTotales: constitución de mesas y los dos avances de participación (14:00 y 18:00)."""
+    out = []
+    for linea in texto.splitlines():
+        f = linea.split(";")
+        if len(f) < len(CAMPOS_AV) + 6:
+            continue
+        r = {n: f[i].strip() for i, n in enumerate(CAMPOS_AV)}
+        for n in CAMPOS_AV[6:]:
+            r[n] = _entero(r[n])
+        r["avances"] = [{"mesas": _entero(f[12 + 3 * k]), "censo": _entero(f[13 + 3 * k]), "pct": _entero(f[14 + 3 * k]) / 100}
+                        for k in range(2)]
+        out.append(r)
+    return out
+
+
 def _entero(x: str) -> int:
     x = x.strip()
     return int(x) if x else 0
@@ -151,7 +194,7 @@ def _hora(fecha: str) -> str:
 
 def _ambito(r: dict, nombre: str | None = None) -> dict:
     cand = sum(p["v"] for p in r["partidos"])
-    partidos = sorted(({"c": p["c"], "s": p["s"], "f": espacio("", p["s"]), "v": p["v"], "e": p["e"]}
+    partidos = sorted(({"c": p["c"], "s": p["s"], "f": espacio_api(p["c"], p["s"]), "v": p["v"], "e": p["e"]}
                        for p in r["partidos"] if p["v"] > 0 or p["e"] > 0), key=lambda p: (-p["e"], -p["v"]))
     return {"nombre": nombre or r["nombre"], "censo": r["censo"], "censo_escrutado": r["censo_escrutado"],
             "escrutado": r["pct_escrutado"], "votantes": r["votantes"], "blancos": r["blancos"], "nulos": r["nulos"],
@@ -167,16 +210,27 @@ def _nombres() -> dict[str, tuple[str, int]]:
         return {r["provincia"]: (r["nombre"], int(r["escanos_29n"])) for r in csv.DictReader(fh)}
 
 
-def a_web(registros: list[dict], prueba: bool = False, simulacro: bool = False) -> dict:
-    """Elección «2026» con la forma de resultados.json. Avisa si los escaños no cuadran con el BOE."""
+def a_web(registros: list[dict], prueba: bool = False, simulacro: bool = False, avances: list[dict] | None = None) -> dict:
+    """Elección «2026» con la forma de resultados.json. Avisa si los escaños no cuadran con el BOE.
+    `avances` (de `leer_avances`) añade a cada ámbito las mesas constituidas y los avances de participación."""
     ref = _nombres()
     nacional = next(r for r in registros if r["tipo"] == "TO")
-    provincias = {r["prov"]: _ambito(r, ref[r["prov"]][0]) for r in registros if r["tipo"] == "PR"}
+    av = {(a["tipo"], a["prov"]): a for a in avances or []}
+
+    def _con_avances(r, nombre):
+        a = _ambito(r, nombre)
+        x = av.get((r["tipo"], r["prov"]))
+        if x:
+            a["mesas"] = {"total": x["mesas"], "constituidas": x["mesas_constituidas"]}
+            a["avances"] = [k["pct"] for k in x["avances"]]
+        return a
+
+    provincias = {r["prov"]: _con_avances(r, ref[r["prov"]][0]) for r in registros if r["tipo"] == "PR"}
     avisos = [f"{p}: {a['escanos_total']} diputados en el fichero, {ref[p][1]} en el BOE"
               for p, a in provincias.items() if a["escanos_total"] != ref[p][1]]
     return {"id": "2026", "fecha": FECHA, "hora": _hora(nacional["fecha"]), "prueba": prueba, "simulacro": simulacro,
             "avisos": avisos,
-            "nacional": _ambito(nacional, "España"), "provincias": dict(sorted(provincias.items()))}
+            "nacional": _con_avances(nacional, "España"), "provincias": dict(sorted(provincias.items()))}
 
 
 def vacio() -> dict:
@@ -198,7 +252,7 @@ def demo(escrutado: float = 0.62) -> str:
     d = S.base_29n()
     pct = {e["id"]: e["inicio"] for e in d["espacios"]} | {"FA": 6.3, "PODEMOS": 4.0, "SALF": 0.0}
     r = S.simular(d, pct)
-    cods = {e: str(i + 1).rjust(4, "0") for i, e in enumerate(S.ORDEN)}
+    cods = CODIGO
     siglas = {"PP": "PP", "PSOE": "PSOE", "VOX": "VOX", "FA": "FA", "PODEMOS": "PODEMOS", "SALF": "SALF", "ERC": "ERC",
               "JUNTS": "JxCat", "EH_BILDU": "EH BILDU", "PNV": "EAJ-PNV", "BNG": "BNG", "CC": "CCa-1.ºCAN",
               "COMPROMIS": "COMPROMIS-EUPV-PODEM-ERPV", "NC": "NC-BC, PODEMOS, IU, SUMAR",

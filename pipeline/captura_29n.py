@@ -78,8 +78,9 @@ def capturar(cliente, envio: str, carpeta: Path, provincias: list[str], base: di
 
     resumen = {"envio": envio, "capturado": f"{ahora:%Y-%m-%d %H:%M:%S}", "carpeta": str(destino)}
     tot = traer("totales.csv", lambda: cliente.totales(envio))
+    av = traer("avances.csv", lambda: cliente.avances(envio))
     if tot:
-        web = E.a_web(E.leer_totales(E.texto(tot)), simulacro=simulacro)
+        web = E.a_web(E.leer_totales(E.texto(tot)), simulacro=simulacro, avances=E.leer_avances(E.texto(av)) if av else None)
         n = web["nacional"]
         # En el simulacro del 18-N un envío de totales llegó a cero con el recuento al 85 %. Si el recuento
         # retrocede respecto a lo ya publicado, no se pisa la página: se anota y se espera al siguiente.
@@ -90,7 +91,6 @@ def capturar(cliente, envio: str, carpeta: Path, provincias: list[str], base: di
             E.guardar(web, salida_web)
         resumen |= {"hora_interior": web["hora"], "escrutado": n["escrutado"],
                     "escanos": {p["s"]: p["e"] for p in n["partidos"] if p["e"]}, "avisos": web["avisos"]}
-    traer("avances.csv", lambda: cliente.avances(envio))
     registros = []
     for p in provincias:
         datos = traer(f"municipios_{p}.csv", lambda p=p: cliente.municipios(p, envio))
