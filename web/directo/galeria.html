@@ -47,7 +47,7 @@
   <div class="galeria" id="galeria"></div>
   <section class="aviso" style="margin-top:22px"><strong>Opciones de la dirección.</strong>
     <code>fondo=transparente|oscuro|croma</code> · <code>lado=derecha</code> (columna) · <code>paso=6</code> (segundos del carrusel del faldón) ·
-    <code>provincia=28</code> (código de provincia) · en el bucle, <code>cada=12</code> (segundos por gráfico),
+    <code>provincia=28</code> (código de provincia) · en el ticker, <code>n=5</code> (provincias), <code>minimo=50</code> (% escrutado para entrar) y <code>velocidad=140</code> · en el bucle, <code>cada=12</code> (segundos por gráfico),
     <code>vistas=arco,participacion,…</code> y <code>provincias=28,08,46,…</code>. La participación se compara con julio de 2023 y
     noviembre de 2019 (Ministerio del Interior).</section>
 </main>
@@ -57,6 +57,7 @@ const VISTAS = [
   ["arco", "Hemiciclo y tabla", "Pantalla completa: 2026 fuera, 2023 dentro.", ""],
   ["participacion", "Participación", "Avances de las 14:00 y las 18:00, comparados con 2023 y 2019.", ""],
   ["faldon", "Faldón", "Barra inferior con carrusel de partidos. Superpuesto.", ""],
+  ["ticker", "Ticker: escaños en el aire", "Cinta que corre con las 5 provincias donde el último escaño está a menos votos. Superpuesto.", ""],
   ["columna", "Columna", "Lateral con todos los partidos con escaño. Superpuesto.", ""],
   ["provincia", "Provincia: Madrid", "Resultado y último escaño de una provincia.", "&provincia=28"],
   ["provincia", "Provincia: Barcelona", "Cambia el código en la dirección para otra provincia.", "&provincia=08"],
@@ -70,7 +71,7 @@ function pintar() {
   document.querySelector("#bucle").href = `${base}?vista=bucle${d}`;
   gal.replaceChildren();
   VISTAS.forEach(([v, titulo, texto, extra]) => {
-    const superpuesta = v === "faldon" || v === "columna";
+    const superpuesta = v === "faldon" || v === "columna" || v === "ticker";
     const real = `${base}?vista=${v}${extra}${d}`;
     const caja = document.createElement("div"); caja.className = "mini";
     const marco = Object.assign(document.createElement("a"), { className: "marco", href: real + (superpuesta ? "&fondo=oscuro" : ""), target: "_blank", rel: "noopener" });

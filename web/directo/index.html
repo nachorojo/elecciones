@@ -14,6 +14,9 @@
     vista=arco           pantalla completa: hemiciclo (fuera 2026, dentro 2023) y tabla
     vista=participacion  pantalla completa: constitución de mesas y avances de las 14:00 y las 18:00
     vista=provincia&provincia=28   pantalla completa: una provincia, con el último escaño
+    vista=ticker         cinta inferior que corre con los escaños más disputados: las n=5 provincias donde a la
+                         candidatura siguiente le faltan menos votos para quitar el último escaño (superpuesta).
+                         minimo=50 (% escrutado de la provincia para entrar); velocidad=140 (píxeles por segundo)
     vista=bucle          pantalla completa: todos los gráficos, uno tras otro (cada=12 segundos por gráfico;
                          vistas=arco,participacion,columna,faldon,provincia; provincias=28,08,46,41,29,48,50).
                          Antes del escrutinio solo alterna participación y faldón.
@@ -35,7 +38,27 @@
   body.fondo-croma { background: #00b140; }
   .vista { display: none; position: absolute; inset: 0; }
   body[data-vista="faldon"] #faldon, body[data-vista="columna"] #columna, body[data-vista="arco"] #arco,
-  body[data-vista="participacion"] #participacion, body[data-vista="provincia"] #provincia { display: block; }
+  body[data-vista="participacion"] #participacion, body[data-vista="provincia"] #provincia,
+  body[data-vista="ticker"] #ticker { display: block; }
+  /* ---------- Ticker de escaños disputados ---------- */
+  #ticker .barra { position: absolute; left: 0; right: 0; bottom: 48px; height: 92px; display: flex; background: var(--panel);
+                   box-shadow: 0 12px 40px rgba(0, 0, 0, .45); }
+  #ticker .cab { flex: none; display: flex; flex-direction: column; justify-content: center; padding: 0 34px; background: var(--acento);
+                 color: #04150d; z-index: 1; box-shadow: 14px 0 22px rgba(0, 0, 0, .45); }
+  #ticker .cab b { font-size: 27px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; line-height: 1.1; }
+  #ticker .cab span { font-size: 17px; font-weight: 600; opacity: .8; }
+  #ticker .cinta { flex: 1; overflow: hidden; }
+  #ticker .rueda { display: inline-flex; height: 100%; align-items: center; white-space: nowrap; will-change: transform;
+                   animation: corre 40s linear infinite; }
+  #ticker .item { display: inline-flex; align-items: center; gap: 14px; padding: 0 46px; font-size: 30px; height: 100%;
+                  border-right: 1px solid rgba(255, 255, 255, .14); }
+  #ticker .item .prov { font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
+  #ticker .item .esc { font-size: 20px; color: var(--tenue); font-weight: 600; }
+  #ticker .item i { width: 18px; height: 18px; border-radius: 5px; flex: none; }
+  #ticker .item .t { color: var(--tenue); }
+  #ticker .item .votos { font-weight: 800; color: #ffd166; }
+  #ticker .aviso { padding: 0 46px; font-size: 28px; color: var(--tenue); align-self: center; }
+  @keyframes corre { from { transform: translateX(0); } to { transform: translateX(-50%); } }
   .sello { font-size: 20px; font-weight: 800; letter-spacing: .12em; padding: 6px 14px; border-radius: 6px;
            background: #ffb020; color: #1a1300; }
   .delta { font-weight: 700; } .delta.sube { color: var(--sube); } .delta.baja { color: var(--baja); }
@@ -161,6 +184,13 @@
   </div>
 </section>
 
+<section id="ticker" class="vista">
+  <div class="barra">
+    <div class="cab"><b>Escaños en el aire</b><span id="t-h"></span></div>
+    <div class="cinta" id="t-cinta"></div>
+  </div>
+</section>
+
 <section id="provincia" class="vista">
   <div class="lleno">
     <div class="titulo"><h1 id="v-titulo"></h1><span class="sello" id="v-sello" hidden>SIMULACRO</span><span class="hora" id="v-h"></span></div>
@@ -174,11 +204,11 @@
 const Q = new URLSearchParams(location.search);
 const TODAS = ["arco", "participacion", "columna", "faldon", "provincia"];
 const BUCLE = Q.get("vista") === "bucle";
-const VISTAS = (Q.get("vistas") || TODAS.join(",")).split(",").filter((v) => TODAS.includes(v));
+const VISTAS = (Q.get("vistas") || TODAS.join(",")).split(",").filter((v) => TODAS.includes(v) || v === "ticker");
 const PROVS = (Q.get("provincias") || "28,08,46,41,29,48,50").split(",");
 let VISTA = BUCLE ? VISTAS[0] || "arco" : Q.get("vista") || "arco";
 let PROV = Q.get("provincia") || PROVS[0];
-const SUPERPUESTA = !BUCLE && (VISTA === "faldon" || VISTA === "columna");
+const SUPERPUESTA = !BUCLE && ["faldon", "columna", "ticker"].includes(VISTA);
 document.body.dataset.vista = VISTA;
 document.body.classList.add("fondo-" + (Q.get("fondo") || (SUPERPUESTA ? "transparente" : "oscuro")));
 if (Q.get("lado") === "derecha") document.body.classList.add("lado-derecha");
@@ -374,7 +404,38 @@ function pintarProvincia() {
   cajas($("#v-cajas"), [[dec(a.escrutado, 2) + " %", "escrutado"], [a.escrutado > 0 ? dec(a.participacion_residentes, 2) + " %" : "—", "participación"],
                         [num(a.validos), "votos válidos"]]);
 }
-const PINTAR = { faldon: pintarFaldon, columna: pintarColumna, arco: pintarArco, participacion: pintarParticipacion, provincia: pintarProvincia };
+/* Escaños más disputados: provincias donde a la siguiente candidatura le faltan menos votos para el último escaño.
+   Los votos que faltan los da Interior sobre lo contado hasta ese envío; para que no ganen siempre las provincias con
+   poco recuento se exige un mínimo escrutado y se ordena por los votos que faltarían al 100 % a este ritmo. */
+function disputados(n, minimo) {
+  return Object.values(D.provincias)
+    .filter((a) => a.escrutado >= minimo && a.escrutado > 0 && a.ultimo && Number(a.ultimo.ultima) > 0 && Number(a.ultimo.proxima) > 0 && a.ultimo.faltan > 0)
+    .sort((x, y) => x.ultimo.faltan / x.escrutado - y.ultimo.faltan / y.escrutado)
+    .slice(0, n);
+}
+function pintarTicker() {
+  const n = Math.max(1, Number(Q.get("n")) || 5), minimo = Q.has("minimo") ? Number(Q.get("minimo")) : 50;
+  const cinta = $("#t-cinta"), lista = disputados(n, minimo);
+  $("#t-h").textContent = (D.simulacro ? "SIMULACRO · " : "") + (D.hora ? "Datos de las " + D.hora : "Último escaño de cada provincia");
+  cinta.replaceChildren();
+  if (!lista.length) { cinta.appendChild(el("div", "aviso", D.nacional.escrutado > 0 ? "Aún no hay provincias con recuento suficiente." : "El escrutinio empieza a las 20:00.")); cinta.style.display = "flex"; return; }
+  cinta.style.display = "";
+  const rueda = el("div", "rueda");
+  const punto = (p) => { const i = el("i"); i.style.background = p ? col(p.f) : "#8D98A6"; return i; };
+  for (let vuelta = 0; vuelta < 2; vuelta++) lista.forEach((a) => {       // dos copias seguidas: la cinta gira sin corte
+    const de = (c) => a.partidos.find((x) => Number(x.c) === Number(c));
+    const u = de(a.ultimo.ultima), s = de(a.ultimo.proxima);
+    const it = el("span", "item");
+    it.append(el("span", "prov", a.nombre), el("span", "esc", dec(a.escrutado, 1) + " % escrutado"),
+      el("span", "t", "último escaño:"), punto(u), el("b", null, u ? nom(u) : "otra candidatura"),
+      el("span", "t", "· se lo quitaría"), punto(s), el("b", null, s ? nom(s) : "otra candidatura"),
+      el("span", "t", "con"), el("span", "votos", num(a.ultimo.faltan) + " votos más"));
+    rueda.appendChild(it);
+  });
+  cinta.appendChild(rueda);
+  rueda.style.animationDuration = Math.max(10, rueda.scrollWidth / 2 / Math.max(40, Number(Q.get("velocidad")) || 140)) + "s";
+}
+const PINTAR = { ticker: pintarTicker, faldon: pintarFaldon, columna: pintarColumna, arco: pintarArco, participacion: pintarParticipacion, provincia: pintarProvincia };
 
 function mostrar() { document.body.dataset.vista = VISTA; (PINTAR[VISTA] || pintarArco)(); }
 // Bucle: pasa al gráfico siguiente. Sin escrutinio solo tienen contenido la participación y el faldón.
