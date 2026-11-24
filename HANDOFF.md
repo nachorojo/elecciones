@@ -3,6 +3,29 @@
 Escrito el 2026-10-23 para retomar el trabajo desde otro PC **solo con GitHub** y sin acceso a la conversación
 original. Léelo entero antes de tocar nada; después lee `CLAUDE.md` (hallazgos y decisiones, más largo).
 
+## 0a. Prueba de medios del miércoles 25 de noviembre (escrita el 2026-11-24)
+Horario de Interior: 15:00 constitución, 15:30 primer avance, 16:00 segundo avance, 16:30 escrutinio del Congreso,
+17:30 escrutinio del Senado. Es el ensayo general del domingo: mismos pasos que en el apartado 0, con `--simulacro`.
+
+1. Antes de las 14:45, en PowerShell dentro de `repo`: `git pull origin claude/peaceful-dijkstra-9hbim8` (trae los cambios del 24-N),
+   `pip install -r requirements.txt` y `python -m pytest tests/test_captura_29n.py tests/test_escrutinio_29n.py -q` → `28 passed`.
+2. Pasos 6, 7 y 8 del apartado 0 (variables con comillas simples, `curl` → `200`, `git push --dry-run`).
+3. A las 14:50: `python -m pipeline.captura_29n --simulacro --publicar`
+4. Qué mirar (es la primera vez que se ve en vivo): de 15:00 a 16:30 la página y `directo/?vista=participacion` deben enseñar mesas
+   constituidas y los dos avances (rotulados 14:00 y 18:00 aunque en la prueba lleguen a las 15:30 y 16:00); desde las 16:30, el recuento.
+   Desde las 17:30 debe salir una línea «Senado, envío N: guardado…» (solo se guarda el fichero; la web no pinta el Senado).
+5. Al acabar (recuento parado cerca del 100 %): Ctrl+C y, en la misma ventana, `python -m pipeline.captura_29n --mesas`.
+   Baja los ficheros por mesa (novedad del manual final) a `datos\29n_envios\mesas_<fecha>\`. Si aún no existen, lo dice y no insiste;
+   probar otra vez un rato después. Copiar aquí lo que imprima.
+6. Dejar la página vacía: `python -m pipeline.escrutinio_29n --vacio`, `git add web/data`, `git commit -m "29N: página vacía"`, `git push`.
+   (Si se olvida, la captura del domingo la vacía sola al arrancar sin `--simulacro`.)
+7. Guardar `datos\29n_envios\registro.csv` y la salida de la ventana: con eso se revisa la prueba.
+
+Si sale «Interior rechaza la petición (401/403)»: la captura espacia los intentos sola (5, 10, 15 min). Con 401, revisar la clave;
+con 403, escribir a soporte con IP pública, hora, URL y código (manual, apartado 4). El límite es de 3.000 peticiones por IP pública
+cada cinco minutos **sumando todo lo que salga por esa IP**: si otros equipos de la casa descargan desde la misma red, cuentan juntos.
+La captura hace unas 55 por envío.
+
 ## 0. Día 29 de noviembre: lista de comprobación (escrita el 2026-11-19)
 Estado: todo lo necesario para la jornada está hecho y probado contra el servicio real de Interior (simulacro del 18-N y
 pasada de comprobación del 19-N). Detalle en `CLAUDE.md`, secciones fechadas del 15 al 19 de noviembre.
@@ -14,7 +37,7 @@ hasta pasada la medianoche, y alguien que mire la ventana de vez en cuando. Un s
 1. En PowerShell, dentro de la carpeta `repo` (no en la de arriba):
    `git pull`
 2. `pip install -r requirements.txt`
-3. `python -m pytest tests/test_captura_29n.py tests/test_escrutinio_29n.py -q` → debe acabar en `16 passed`.
+3. `python -m pytest tests/test_captura_29n.py tests/test_escrutinio_29n.py -q` → debe acabar en `28 passed`.
 4. Comprobar que la página del 29N está vacía (0 % escrutado, sin rótulo de simulacro). Si no lo está:
    `python -m pipeline.escrutinio_29n --vacio`, y después `git add web/data/vivo_29n.json`, `git commit -m "29N: página vacía"`, `git push`.
 5. Quitar la suspensión automática del PC para el domingo.
@@ -46,7 +69,8 @@ hasta pasada la medianoche, y alguien que mire la ventana de vez en cuando. Un s
 - **El PC muere:** en otro equipo, `git clone`, pasos 1–3 y 6–9. Tenerlo preparado de antemano, pero sin lanzar la captura.
 
 ### Después
-- Parar con Ctrl+C cuando el escrutinio esté cerca del 100 % y deje de cambiar.
+- Parar con Ctrl+C cuando el escrutinio esté cerca del 100 % y deje de cambiar. Después, en la misma ventana:
+  `python -m pipeline.captura_29n --mesas` (ficheros por mesa de Interior; solo existen al terminar el recuento provisional).
 - Los ficheros de Interior quedan en `datos\29n_envios\` (comprimidos, unos pocos MB por envío): con ellos se puede repetir la proyección
   envío a envío (`python -m pipeline.captura_29n --repetir CARPETA`) y, por primera vez, medirla contra un recuento real.
 - El resultado de la noche no incluye el voto exterior (CERA), que se cuenta días después y puede mover algún escaño.

@@ -10,8 +10,7 @@ fija y, en los porcentajes, las dos últimas posiciones son decimales.
     python -m pipeline.escrutinio_29n --descargar  # pide el último envío a la API y lo convierte
 
 Para --descargar hacen falta ELECCIONES_API_URL (dominio del repositorio), ELECCIONES_API_USER y
-ELECCIONES_API_PASS. El manual no dice el dominio ni cómo se autentica: aquí se supone
-autenticación HTTP básica. SIN PROBAR contra el servicio real (simulacro: 18 de noviembre, 15:00).
+ELECCIONES_API_PASS. Autenticación HTTP básica (probada en el simulacro del 18 de noviembre).
 
 La salida tiene la misma forma que una elección de web/data/resultados.json, más `escrutado`
 (% de censo escrutado) y `hora`, para que la web la pinte igual que las demás convocatorias.
@@ -52,6 +51,12 @@ CAMPOS_MUN = [("fecha", 10), ("ccaa", 2), ("prov", 2), ("fijo", 1), ("mun", 3), 
               ("votantes", 8), ("pct_votantes", 5), ("abstencion", 8), ("pct_abstencion", 5), ("blancos", 8),
               ("pct_blancos", 5), ("nulos", 8), ("pct_nulos", 5)]
 CAND_MUN = 4
+# Campos fijos de /mesas/getEscrutinio/2/{codPrv}.csv (manual final, apartado 3.2). Después, 80 × (código, siglas,
+# votos, porcentaje). Interior los publica al terminar el recuento provisional, no durante la noche.
+CAMPOS_MESA = [("fecha", 10), ("ccaa", 2), ("prov", 2), ("circ", 1), ("mun", 3), ("distrito", 2), ("seccion", 3),
+               ("mesa", 1), ("nombre", 50), ("fijo2", 2), ("fijo3", 2), ("mesas", 5), ("censo", 8),
+               ("censo_escrutado", 8), ("pct_escrutado", 5), ("votantes", 8), ("pct_votantes", 5), ("abstencion", 8),
+               ("pct_abstencion", 5), ("blancos", 8), ("pct_blancos", 5), ("nulos", 8), ("pct_nulos", 5)]
 
 
 # Código de agrupación de la API de Interior (fichero getCandidaturas/2) -> espacio. Lo que no está, OTROS.
@@ -147,18 +152,17 @@ def escribir_totales(registros: list[dict]) -> str:
     return "\r\n".join(lineas) + "\r\n"
 
 
-def leer_municipios(texto: str) -> list[dict]:
-    """Registros de getEscrutinioMunicipios de una provincia: municipios (distrito «99») y distritos de las
-    siete grandes ciudades (distrito distinto de «99»; sus votos ya están incluidos en el registro del municipio)."""
+def _leer_sin_escanos(texto: str, campos: list, que: str) -> list[dict]:
+    """Registros con campos fijos y 80 × (código, siglas, votos, porcentaje): municipios y mesas."""
     out = []
-    n_fijos = len(CAMPOS_MUN)
+    n_fijos = len(campos)
     for linea in texto.splitlines():
         if not linea.strip():
             continue
         f = linea.split(";")
         if len(f) < n_fijos + N_CAND * CAND_MUN:
-            raise ValueError(f"Registro municipal con {len(f)} campos; se esperaban {n_fijos + N_CAND * CAND_MUN}")
-        r = {n: f[i].strip() for i, (n, _) in enumerate(CAMPOS_MUN)}
+            raise ValueError(f"Registro {que} con {len(f)} campos; se esperaban {n_fijos + N_CAND * CAND_MUN}")
+        r = {n: f[i].strip() for i, (n, _) in enumerate(campos)}
         for n in ("mesas", "censo", "censo_escrutado", "votantes", "abstencion", "blancos", "nulos"):
             r[n] = _entero(r[n])
         for n in ("pct_escrutado", "pct_votantes", "pct_abstencion", "pct_blancos", "pct_nulos"):
@@ -173,16 +177,32 @@ def leer_municipios(texto: str) -> list[dict]:
     return out
 
 
+def leer_municipios(texto: str) -> list[dict]:
+    """Registros de getEscrutinioMunicipios de una provincia: municipios (distrito «99») y distritos de las
+    siete grandes ciudades (distrito distinto de «99»; sus votos ya están incluidos en el registro del municipio)."""
+    return _leer_sin_escanos(texto, CAMPOS_MUN, "municipal")
+
+
+def leer_mesas(texto: str) -> list[dict]:
+    """Registros de /mesas/getEscrutinio/2/{codPrv}.csv: una mesa por registro. Añade `seccion_id` con el formato
+    de la base histórica (provincia + municipio + distrito + sección, 10 dígitos). Escrito a partir del manual:
+    SIN PROBAR con un fichero real hasta la prueba de medios del 25 de noviembre."""
+    out = _leer_sin_escanos(texto, CAMPOS_MESA, "de mesa")
+    for r in out:
+        r["seccion_id"] = r["id"] + r["distrito"] + r["seccion"]
+    return out
+
+
 def escribir_municipios(registros: list[dict]) -> str:
-    """Inverso de `leer_municipios` (para pruebas)."""
+    """Inverso de `leer_municipios` y, si los registros llevan `seccion`, de `leer_mesas` (para pruebas)."""
     lineas = []
     for r in registros:
         f = []
-        for n, lon in CAMPOS_MUN:
+        for n, lon in (CAMPOS_MESA if "seccion" in r else CAMPOS_MUN):
             v = r.get(n, "9" if n == "fijo" else "99" if n in ("fijo2", "fijo3", "distrito") else "")
             if n.startswith("pct_"):
                 v = round(float(v or 0) * 100)
-            f.append(str(v).ljust(lon) if n == "nombre" else str(v).rjust(lon, "0"))
+            f.append(str(v).ljust(lon) if n in ("nombre", "mesa") else str(v).rjust(lon, "0"))
         for k in range(N_CAND):
             p = r["partidos"][k] if k < len(r["partidos"]) else None
             f += [p["c"].rjust(4, "0"), p["s"].ljust(55), str(p["v"]).rjust(8, "0"), "0" * 5] if p \
@@ -303,39 +323,44 @@ def demo(escrutado: float = 0.62) -> str:
 
 class Cliente:
     """Peticiones GET a la API de descargas. Dominio y credenciales, por variables de entorno:
-    ELECCIONES_API_URL, ELECCIONES_API_USER, ELECCIONES_API_PASS. El manual no dice cómo se autentica:
-    se supone autenticación HTTP básica (ELECCIONES_API_AUTH=basic, por defecto); con «ninguna» no se
-    envía cabecera. SIN PROBAR contra el servicio real."""
+    ELECCIONES_API_URL, ELECCIONES_API_USER, ELECCIONES_API_PASS. Autenticación HTTP básica (probada en el
+    simulacro del 18-N); con ELECCIONES_API_AUTH=ninguna no se envía cabecera. El manual pide que la cabecera
+    User-Agent no vaya vacía: se manda una fija (ELECCIONES_API_UA la cambia). `eleccion`: 2 = Congreso, 3 = Senado."""
 
     def __init__(self, base: str | None = None, usuario: str | None = None, clave: str | None = None):
         self.base = (base or os.environ["ELECCIONES_API_URL"]).rstrip("/")
         usuario = usuario or os.environ.get("ELECCIONES_API_USER", "")
         clave = clave or os.environ.get("ELECCIONES_API_PASS", "")
-        self.cabeceras = {}
+        self.cabeceras = {"User-Agent": os.environ.get("ELECCIONES_API_UA", "captura-29n/1.0 (python-urllib)")}
         if usuario and os.environ.get("ELECCIONES_API_AUTH", "basic") == "basic":
             self.cabeceras["Authorization"] = "Basic " + base64.b64encode(f"{usuario}:{clave}".encode()).decode()
 
-    def pedir(self, ruta: str) -> bytes:
+    def pedir(self, ruta: str, espera: int = 60) -> bytes:
         req = urllib.request.Request(self.base + ruta, headers=self.cabeceras)
-        with urllib.request.urlopen(req, timeout=60) as r:
+        with urllib.request.urlopen(req, timeout=espera) as r:
             return r.read()
 
-    def envio(self) -> str:
-        """Número del último envío del Congreso (se toma el primer número de la respuesta)."""
+    def envio(self, eleccion: int = 2) -> str:
+        """Número del último envío (se toma el primer número de la respuesta)."""
         import re
-        m = re.search(r"\d+", self.pedir("/descargas/csv/data/getEnvio/2").decode("utf-8", errors="replace"))
+        m = re.search(r"\d+", self.pedir(f"/descargas/csv/data/getEnvio/{eleccion}").decode("utf-8", errors="replace"))
         if not m:
-            raise ValueError("getEnvio/2 no ha devuelto ningún número de envío")
+            raise ValueError(f"getEnvio/{eleccion} no ha devuelto ningún número de envío")
         return m.group(0)
 
-    def totales(self, envio: str) -> bytes:
-        return self.pedir(f"/descargas/csv/data/getEscrutinioTotales/2/{envio}")
+    def totales(self, envio: str, eleccion: int = 2) -> bytes:
+        return self.pedir(f"/descargas/csv/data/getEscrutinioTotales/{eleccion}/{envio}")
 
     def municipios(self, prov: str, envio: str) -> bytes:
         return self.pedir(f"/descargas/csv/data/getEscrutinioMunicipios/2/{prov}/{envio}")
 
     def avances(self, envio: str) -> bytes:
         return self.pedir(f"/descargas/csv/data/getAvancesTotales/2/{envio}")
+
+    def mesas(self, que: str, prov: str) -> bytes:
+        """Ficheros por mesa de una provincia (sin número de envío; son grandes): `que` = «getAvances/2»,
+        «getEscrutinio/2» (Congreso) o «getEscrutinio/3» (Senado)."""
+        return self.pedir(f"/mesas/{que}/{prov}.csv", espera=600)
 
 
 def texto(datos: bytes) -> str:
@@ -421,6 +446,13 @@ def guardar(datos: dict, salida: Path) -> Path:
     return salida
 
 
+def vaciar(salida: Path = VIVO) -> list[Path]:
+    """Deja sin escrutinio los ficheros que lee la web: recuento, resumen para pantallas y proyección."""
+    return [guardar(vacio(), salida), guardar_pantallas(vacio(), salida=salida.with_name("pantallas_29n.json")),
+            guardar({"escrutado": 0, "nacional": {"escanos": {}, "pct": {}}, "provincias": {}},
+                    salida.with_name("proyeccion_29n.json"))]
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("fichero", nargs="?")
@@ -434,8 +466,7 @@ if __name__ == "__main__":
     elif a.demo:
         print(guardar(a_web(leer_totales(demo()), prueba=True), DEMO))
     elif a.vacio:
-        print(guardar(vacio(), VIVO), guardar_pantallas(vacio()),
-              guardar({"escrutado": 0, "nacional": {"escanos": {}, "pct": {}}, "provincias": {}}, WEB / "proyeccion_29n.json"))
+        print(*vaciar())
     else:
         texto = descargar() if a.descargar else Path(a.fichero).read_text(encoding="utf-8", errors="replace")
         web = a_web(leer_totales(texto))

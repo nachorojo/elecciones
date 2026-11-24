@@ -4,7 +4,9 @@ Se fabrica una «noche» ficticia (la base de 2023 con cambios distintos por pro
 Amplio y Se Acabó la Fiesta), se escribe en el formato de la API de Interior, y se comprueba que la captura
 la lee, actualiza el fichero de la web y proyecta un reparto cercano al final.
 """
+import gzip
 import json
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -162,3 +164,95 @@ def test_siglas_reales_del_simulacro():
     casos = {"PAZ,CASA Y TRABAJO": "PODEMOS", "UPN-PP": "PP", "CCa-1ºCAN": "CC", "EH BILDU-ERC": "EH_BILDU", "JxCat": "JUNTS",
              "NC-BC, PODEMOS, IU, SUMAR": "NC", "COMPROMIS-EUPV-PODEM-ERPV": "COMPROMIS", "EAJ-PNV": "PNV", "FO": "OTROS"}
     assert {s: espacio("", s) for s in casos} == casos
+
+
+# --- Manual final (24-N): ficheros por mesa, Senado y recomendaciones de descarga ---------------------------------
+
+def test_formato_de_mesas_del_manual():
+    """/mesas/getEscrutinio/2/{codPrv}.csv: 23 campos fijos + 80 × 4. Fichero fabricado según el manual, no real."""
+    reg = {"fecha": "2611292330", "ccaa": "12", "prov": "28", "circ": "9", "mun": "079", "distrito": "01", "seccion": "004",
+           "mesa": "B", "nombre": "MADRID 01-004-B", "mesas": 1, "censo": 812, "censo_escrutado": 812, "pct_escrutado": 100,
+           "votantes": 560, "pct_votantes": 68.97, "abstencion": 252, "blancos": 4, "nulos": 6,
+           "partidos": [{"c": "0007", "s": "PP", "v": 250}, {"c": "0001", "s": "PSOE", "v": 300}]}
+    texto = E.escribir_municipios([reg])
+    assert len(texto.splitlines()[0].split(";")) == 23 + 80 * 4
+    assert sum(lon for _, lon in E.CAMPOS_MESA) == 156
+    (m,) = E.leer_mesas(texto)
+    assert (m["id"], m["seccion_id"], m["mesa"], m["censo"], m["pct_votantes"]) == ("28079", "2807901004", "B", 812, 68.97)
+    assert [(p["s"], p["v"]) for p in m["partidos"]] == [("PP", 250), ("PSOE", 300)]
+
+
+class _Falso:
+    """Servicio de mentira: cuenta las peticiones y responde lo que diga `responder(ruta)`."""
+
+    def __init__(self, responder):
+        self.responder, self.pedidas = responder, []
+
+    def _pedir(self, ruta):
+        self.pedidas.append(ruta)
+        return self.responder(ruta)
+
+    def totales(self, envio, eleccion=2):
+        return self._pedir(f"totales/{eleccion}/{envio}")
+
+    def avances(self, envio):
+        return self._pedir(f"avances/{envio}")
+
+    def municipios(self, prov, envio):
+        return self._pedir(f"municipios/{prov}/{envio}")
+
+    def mesas(self, que, prov):
+        return self._pedir(f"mesas/{que}/{prov}")
+
+
+def _http(codigo):
+    import urllib.error
+    return urllib.error.HTTPError("http://x", codigo, "rechazado", None, None)
+
+
+def test_tras_tres_403_seguidos_no_se_pide_el_resto(tmp_path):
+    """Manual, apartado 4: ante un 401/403 hay que dejar de insistir (riesgo de bloqueo del usuario)."""
+    def responder(ruta):
+        raise _http(403)
+    c = _Falso(responder)
+    r = K.capturar(c, "9", tmp_path, [f"{i:02d}" for i in range(1, 53)], None, salida_web=tmp_path / "v.json")
+    assert len(c.pedidas) == 3 and "no se pide el resto" in r["fallos"][-1]
+    # Un fallo que no es 401/403 (un corte, un 500) no corta el envío: se sigue con las demás provincias.
+    def cortes(ruta):
+        raise TimeoutError("sin respuesta")
+    c = _Falso(cortes)
+    K.capturar(c, "9", tmp_path, ["01", "02", "03", "04"], None, salida_web=tmp_path / "v.json")
+    assert len(c.pedidas) == 6
+
+
+def test_ficheros_por_mesa_y_senado(tmp_path):
+    """Los de mesa solo existen al acabar cada fase: lo que haya se guarda y lo que no, se deja a los tres fallos."""
+    def responder(ruta):
+        if "getEscrutinio/3" in ruta:
+            raise _http(404)
+        return b"contenido de " + ruta.encode()
+    c = _Falso(responder)
+    r = K.capturar_mesas(c, tmp_path, ["01", "02", "03", "04", "05"], pausa=0)
+    assert r["avances"]["provincias"] == 5 and r["escrutinio_congreso"]["provincias"] == 5
+    assert r["escrutinio_senado"]["provincias"] == 0 and "404" in r["escrutinio_senado"]["ultimo_error"]
+    assert len(c.pedidas) == 5 + 5 + 3
+    carpeta = Path(r["carpeta"])
+    assert len(list(carpeta.iterdir())) == 10
+    assert gzip.decompress((carpeta / "escrutinio_congreso_04.csv.gz").read_bytes()) == b"contenido de mesas/getEscrutinio/2/04"
+    f = K.capturar_senado(_Falso(lambda ruta: b"senado " + ruta.encode()), "12", tmp_path)
+    assert f.parent.name == "senado" and f.name.startswith("envio_12_") and gzip.decompress(f.read_bytes()) == b"senado totales/3/12"
+
+
+def test_la_jornada_real_no_arranca_con_restos_de_una_prueba(tmp_path):
+    f = tmp_path / "vivo_29n.json"
+    f.write_text(json.dumps({"simulacro": True, "nacional": {"escrutado": 98.5}}), encoding="utf-8")
+    assert K._es_simulacro(f)
+    E.vaciar(f)
+    d = json.loads(f.read_text(encoding="utf-8"))
+    assert not K._es_simulacro(f) and d["nacional"]["escrutado"] == 0 and len(d["provincias"]) == 52
+    assert json.loads((tmp_path / "pantallas_29n.json").read_text(encoding="utf-8"))["fase"] == "previa"
+
+
+def test_cabecera_user_agent():
+    c = E.Cliente("https://ejemplo.invalid/", "u", "c")
+    assert c.cabeceras["User-Agent"] and c.cabeceras["Authorization"].startswith("Basic ")

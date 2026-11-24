@@ -5,6 +5,7 @@ lo guarda tal cual con su hora, actualiza el fichero que lee la web y calcula la
     python -m pipeline.captura_29n --una-vez                   # un solo envío y termina
     python -m pipeline.captura_29n --repetir CARPETA_DE_ENVIO  # rehace un envío ya guardado (sin red)
     python -m pipeline.captura_29n --publicar                  # además, git commit + push del fichero de la web
+    python -m pipeline.captura_29n --mesas                     # baja los ficheros por mesa (al acabar cada fase) y termina
 
 Variables de entorno: ELECCIONES_API_URL, ELECCIONES_API_USER, ELECCIONES_API_PASS (y ELECCIONES_API_AUTH).
 Las credenciales NO se escriben en ningún fichero ni se suben a la repo.
@@ -14,6 +15,8 @@ Qué guarda, en --carpeta (por defecto ../datos/29n_envios, fuera de la repo):
                                                                                    comprimidos (gzip), sin modificar
     envio_<...>/proyeccion.json                                                    estimación propia (no se publica)
     registro.csv                                                                   una línea por envío capturado
+    senado/envio_<número>_<AAAAMMDD-HHMMSS>_totales.csv.gz                         totales del Senado, tal cual (no se leen)
+    mesas_<AAAAMMDD-HHMMSS>/avances_NN, escrutinio_congreso_NN, escrutinio_senado_NN (.csv.gz)   solo con --mesas
 Y en la repo: web/data/vivo_29n.json (lo que pinta la página).
 """
 from __future__ import annotations
@@ -24,6 +27,7 @@ import gzip
 import json
 import subprocess
 import time
+import urllib.error
 from datetime import datetime
 from pathlib import Path
 
@@ -64,13 +68,20 @@ def capturar(cliente, envio: str, carpeta: Path, provincias: list[str], base: di
     destino = carpeta / f"envio_{envio}_{ahora:%Y%m%d-%H%M%S}" if guardar_bruto else Path(cliente.carpeta)
     destino.mkdir(parents=True, exist_ok=True)
     fallos = []
+    rechazos = [0]                                   # 401/403 seguidos en este envío
 
     def traer(nombre: str, pedir) -> bytes | None:
+        if rechazos[0] >= RECHAZOS:                  # el manual pide no insistir tras un 401/403
+            return None
         try:
             datos = pedir()
         except Exception as e:                       # una provincia que falla no debe parar la noche
             fallos.append(f"{nombre}: {e}")
+            rechazos[0] = rechazos[0] + 1 if _rechazo(e) else 0
+            if rechazos[0] == RECHAZOS:
+                fallos.append(f"{RECHAZOS} respuestas 401/403 seguidas: no se pide el resto de este envío")
             return None
+        rechazos[0] = 0
         if guardar_bruto:
             # Comprimido: los 52 ficheros de municipios ocupan unos 50 MB por envío sin comprimir.
             (destino / (nombre + ".gz")).write_bytes(gzip.compress(datos, 6))
@@ -119,6 +130,49 @@ def capturar(cliente, envio: str, carpeta: Path, provincias: list[str], base: di
     return resumen
 
 
+RECHAZOS = 3
+
+
+def _rechazo(e: Exception) -> bool:
+    return isinstance(e, urllib.error.HTTPError) and e.code in (401, 403)
+
+
+def capturar_senado(cliente, envio: str, carpeta: Path) -> Path:
+    """Guarda tal cual los totales del Senado de un envío. No se leen ni se publican: quedan para después."""
+    destino = carpeta / "senado"
+    destino.mkdir(parents=True, exist_ok=True)
+    f = destino / f"envio_{envio}_{datetime.now():%Y%m%d-%H%M%S}_totales.csv.gz"
+    f.write_bytes(gzip.compress(cliente.totales(envio, 3), 6))
+    return f
+
+
+MESAS = {"avances": "getAvances/2", "escrutinio_congreso": "getEscrutinio/2", "escrutinio_senado": "getEscrutinio/3"}
+
+
+def capturar_mesas(cliente, carpeta: Path, provincias: list[str], pausa: float = 0.5) -> dict:
+    """Baja los ficheros por mesa (participación, Congreso y Senado) de cada provincia. Interior los deja al
+    terminar cada fase, así que antes de eso fallan: tras tres fallos seguidos se deja ese tipo de fichero."""
+    destino = carpeta / f"mesas_{datetime.now():%Y%m%d-%H%M%S}"
+    destino.mkdir(parents=True, exist_ok=True)
+    resumen = {"carpeta": str(destino)}
+    for nombre, ruta in MESAS.items():
+        hechos, seguidos, error = 0, 0, ""
+        for p in provincias:
+            try:
+                datos = cliente.mesas(ruta, p)
+            except Exception as e:
+                seguidos, error = seguidos + 1, f"{p}: {e}"
+                if seguidos == 3:
+                    break
+                continue
+            seguidos = 0
+            hechos += 1
+            (destino / f"{nombre}_{p}.csv.gz").write_bytes(gzip.compress(datos, 6))
+            time.sleep(pausa)
+        resumen[nombre] = {"provincias": hechos, "ultimo_error": error}
+    return resumen
+
+
 def _escrutado_publicado(fichero: Path, simulacro: bool) -> float:
     """% escrutado del fichero que ya lee la web (0 si no existe, está vacío o es de otro tipo de sesión)."""
     try:
@@ -126,6 +180,13 @@ def _escrutado_publicado(fichero: Path, simulacro: bool) -> float:
         return float(d["nacional"]["escrutado"]) if bool(d.get("simulacro")) == simulacro else 0.0
     except (OSError, ValueError, KeyError):
         return 0.0
+
+
+def _es_simulacro(fichero: Path) -> bool:
+    try:
+        return bool(json.loads(fichero.read_text(encoding="utf-8")).get("simulacro"))
+    except (OSError, ValueError):
+        return False
 
 
 def publicar(fichero: Path, mensaje: str) -> str:
@@ -160,6 +221,8 @@ def main() -> None:
     ap.add_argument("--publicar", action="store_true", help="git commit + push de web/data/vivo_29n.json en cada envío")
     ap.add_argument("--sin-proyeccion", action="store_true")
     ap.add_argument("--repetir", type=Path, help="carpeta de un envío ya guardado: lo reprocesa sin conectarse")
+    ap.add_argument("--mesas", action="store_true", help="baja los ficheros por mesa de las 52 provincias y termina")
+    ap.add_argument("--sin-senado", action="store_true", help="no guarda los totales del Senado")
     a = ap.parse_args()
     base = None if a.sin_proyeccion else P.base_municipal()
     provincias = base["provincias"] if base else [f"{i:02d}" for i in range(1, 53)]
@@ -169,7 +232,17 @@ def main() -> None:
         return
     cliente = E.Cliente()
     a.carpeta.mkdir(parents=True, exist_ok=True)
-    ultimo = None
+    if a.mesas:
+        print(json.dumps(capturar_mesas(cliente, a.carpeta, provincias), ensure_ascii=False, indent=1))
+        return
+    if not a.simulacro and _es_simulacro(E.VIVO):
+        E.vaciar()                                   # no empezar la jornada real con restos de una prueba en la página
+        print("La página tenía datos de un simulacro: se ha vaciado.")
+        if a.publicar:
+            print("   " + (publicar(E.VIVO, "29N: página vacía") or "publicada vacía"))
+    ultimo = ultimo_senado = None
+    error_senado = ""
+    rechazos = 0
     print(f"Capturando en {a.carpeta} cada {a.intervalo} s. Ctrl+C para parar.")
     while True:
         try:
@@ -186,10 +259,31 @@ def main() -> None:
                     if error:
                         print("   no se pudo publicar ->", error)
                 ultimo = envio
+            rechazos = 0
         except KeyboardInterrupt:
             raise
         except Exception as e:
             print(f"{datetime.now():%H:%M:%S}  error: {e}")
+            if _rechazo(e):
+                # Manual, apartado 4: ante un 401/403 no reintentar de continuo. Se espacia: 5, 10 y 15 minutos.
+                rechazos += 1
+                espera = min(15, 5 * rechazos)
+                print(f"   Interior rechaza la petición ({e.code}). 401: revisar usuario y clave. 403: puede ser un bloqueo;"
+                      f" avisar a soporte (IP pública, hora, URL y código). Nuevo intento en {espera} min.")
+                if not a.una_vez:
+                    time.sleep(espera * 60 - a.intervalo)
+        if not a.sin_senado and not rechazos:
+            try:
+                es = cliente.envio(3)
+                if es != ultimo_senado:
+                    print(f"{datetime.now():%Y-%m-%d %H:%M:%S}  Senado, envío {es}: guardado en {capturar_senado(cliente, es, a.carpeta).name}")
+                    ultimo_senado, error_senado = es, ""
+            except KeyboardInterrupt:
+                raise
+            except Exception as e:                   # antes de su escrutinio puede no haber nada: se avisa una sola vez
+                if str(e) != error_senado:
+                    error_senado = str(e)
+                    print(f"{datetime.now():%H:%M:%S}  Senado: {e}")
         if a.una_vez:
             break
         time.sleep(a.intervalo)

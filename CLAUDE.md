@@ -213,6 +213,21 @@ python -m pytest            # 68 tests; se saltan si no hay Parquet bruto (ni fi
 - **Ticker «Escaños en el aire»** (`directo/?vista=ticker`, también en la galería): cinta que corre con las `n=5` provincias donde a la candidatura siguiente le faltan menos votos para quitar el último escaño (campo `ultimo` de Interior). Solo entran provincias con `minimo=50` % escrutado y se ordenan por votos que faltan ÷ % escrutado (si no, ganarían siempre las de poco recuento); se muestra la cifra de Interior tal cual. `velocidad=140` px/s. No está en el bucle por defecto (`vistas=…,ticker` lo añade).
 - **Pantallas exteriores** (`web/pantallas.html`): direcciones de `data/pantallas_29n.json/.csv` y de los de ejemplo, y lo que contienen ahora. Cambian con cada envío de Interior (~3 min en el simulacro).
 
+## Manual final de la API y prueba de medios del 25 de noviembre (2026-11-24)
+- **Prueba de medios: miércoles 25-N** (15:00 constitución, 15:30 y 16:00 avances, 16:30 escrutinio del Congreso, 17:30 del Senado). Pasos en `HANDOFF.md`, apartado 0a.
+- **Manual final (PDF de Nacho, 24 páginas; no está en la repo).** Los diseños de totales (22 + 80 × 5), municipios (21 + 80 × 4) y avances (12 + 2 × 3) **no cambian**. Novedades:
+  - **Ficheros por mesa** (apartado 2.4), sin número de envío: `/mesas/getAvances/2/{codPrv}.csv`, `/mesas/getEscrutinio/2/{codPrv}.csv` (Congreso) y `/mesas/getEscrutinio/3/{codPrv}.csv` (Senado). **No son en vivo**: participación «al finalizar cada fase» y escrutinio «al finalizar el recuento provisional». Registro de mesa del Congreso: 23 campos fijos (comunidad, provincia, circunscripción, municipio, distrito, sección, mesa, nombre…) + 80 × (código, siglas, votos, %). Corrige «no hay mesa»: la hay, pero después. Sigue sin haber orden de llegada de las mesas.
+  - **Senado**: `getEnvio/3` (número de envío propio), `getEscrutinioTotales/3/{numEnv}` (TO/CM/CI, 19 fijos + 80 × 7, con candidatos a nivel de circunscripción), `getEscrutinioMunicipios/3/{codPrv}/{numEnv}`, `fijos/getCandidaturas/3`, `fijos/getCandidatos/3` y 2023 en `fijos/getEscrutinioTotales/ANT/3/07-23`.
+  - **Recomendaciones (apartado 4):** User-Agent no vacío; **3.000 peticiones por IP pública cada cinco minutos** (lo comparten todos los procesos que salgan por esa IP); ante 401/403 no reintentar de continuo; 403 puede no ser de credenciales; riesgo de bloqueo del usuario.
+- **Hecho en el código** (probado con ficheros fabricados y un servidor local; **sin probar contra Interior**):
+  - `Cliente` manda `User-Agent` fijo (`ELECCIONES_API_UA` lo cambia) y sabe pedir Senado y mesas.
+  - `captura_29n`: con tres 401/403 seguidos deja de pedir el resto del envío; si el rechazo es en `getEnvio`, espera 5, 10 y 15 min entre intentos y dice qué hacer.
+  - Guarda **tal cual** los totales del Senado de cada envío en `..\datos\29n_envios\senado\` (`--sin-senado` lo quita). No se leen ni se pintan: no hay vista de Senado en la web.
+  - `--mesas`: baja los tres ficheros por mesa de las 52 provincias a `..\datos\29n_envios\mesas_<fecha>\` y termina (a los tres fallos seguidos deja ese tipo). `escrutinio_29n.leer_mesas` los lee y añade `seccion_id` de 10 dígitos, cruzable con la base histórica.
+  - Al arrancar sin `--simulacro`, si la página tiene datos de un simulacro, la vacía (`escrutinio_29n.vaciar`).
+- **Para qué sirven las mesas:** tras el 29N, resultados por sección sin esperar a los ficheros definitivos de Interior, y medir cuánta variación hay dentro de cada municipio (el límite 2 del backtest de la proyección). No resuelven la validación del orden de llegada.
+- **Por ver en la prueba:** si los ficheros de mesa existen y cuánto pesan (estimación: 6 KB por mesa en Congreso, unos 370 MB sin comprimir las 61.000); qué devuelve `getEnvio/3` antes de las 17:30; qué código da un fichero que aún no existe (si es 403, el corte por rechazos saltaría con ficheros simplemente ausentes).
+
 ## Calendario del 29N
 - **28 de octubre de 2026**: candidaturas presentadas (BOE-A-2026-22607); **3 de noviembre**: proclamadas; 7 de noviembre: corrección. Recogido (ver sección anterior). Campaña: 13–27 de noviembre. Constitución de las Cámaras: 23 de diciembre.
 - Veda: cualquier estimación de voto se publica después de las 20:00 del día de la elección (LOREG).
