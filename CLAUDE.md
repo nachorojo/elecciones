@@ -1,10 +1,12 @@
 ---
-estado: "EN MARCHA — web de datos electorales por mesa (generales 1996–2023). Pendientes: actualización con el 29N y modelo predictivo."
-revisado: "2026-10-31"
-proximo: "Leer HANDOFF.md del repo (estado, decisiones, pendientes y trampas) y preparar la carga de resultados del 29N."
+estado: "EN MARCHA — web interna con el 29N en directo (recuento de Interior, gráficos para OBS, piezas para redes y proyección). Probada en el simulacro del 18-N; prueba de medios el 25-N; elecciones el domingo 29-N."
+revisado: "2026-11-24"
+proximo: "Miércoles 25-N, 14:30: en el PC, git pull origin claude/peaceful-dijkstra-9hbim8 y seguir HANDOFF.md, apartado 0a (captura con --simulacro --publicar a las 14:50)."
 corre_en: "Netlify (proyecto `elecciones2030`) desde GitHub nachorojo/elecciones. Datos fuera del repo, en `Elecciones 2026/datos/` (OneDrive)."
-bloqueos: "Ver «Pendiente de decidir» en este doc."
+bloqueos: "Jurídico (LOREG 69.7) si la web se hace pública; guía de marca de Onda Cero para gráficos; ver «Pendiente de decidir» en este doc."
 ---
+
+> **Cierre de sesión (regla del gestor de proyectos).** Al terminar una sesión con avance real, actualiza SOLO la cabecera de este documento (`estado`, `revisado` con la fecha de hoy, `proximo` con un único paso concreto y `bloqueos`). El gestor de proyectos la lee desde la copia de OneDrive ("Proyectos Claude.xlsx"). Sin claves ni contraseñas en la cabecera. Si trabajas en la nube desde GitHub, Nacho tiene que hacer `git pull` en la carpeta local para que se vea.
 
 # Web electoral por mesa (Generales 1996–2023 → 29N)
 
