@@ -21,6 +21,12 @@ Horario de Interior: 15:00 constitución, 15:30 primer avance, 16:00 segundo ava
    (Si se olvida, la captura del domingo la vacía sola al arrancar sin `--simulacro`.)
 7. Guardar `datos\29n_envios\registro.csv` y la salida de la ventana: con eso se revisa la prueba.
 
+**Lo que se revisa desde la nube mientras corre la prueba** (no hace falta nada más en el PC; cada envío es un commit):
+- Gráficos en cada fase: `git fetch origin claude/blissful-dirac-j8h7p9`, `git show FETCH_HEAD:web/data/vivo_29n.json > envio.json` y
+  `node herramientas/capturas_directo.js envio.json CARPETA`.
+- Piezas para redes: `directo/redes.html` (menú «Piezas para redes»).
+- Recuento frente a proyección: `python -m pipeline.analisis_prueba FETCH_HEAD --desde 2026-11-25`.
+
 Si sale «Interior rechaza la petición (401/403)»: la captura espacia los intentos sola (5, 10, 15 min). Con 401, revisar la clave;
 con 403, escribir a soporte con IP pública, hora, URL y código (manual, apartado 4). El límite es de 3.000 peticiones por IP pública
 cada cinco minutos **sumando todo lo que salga por esa IP**: si otros equipos de la casa descargan desde la misma red, cuentan juntos.

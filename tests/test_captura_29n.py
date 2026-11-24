@@ -256,3 +256,22 @@ def test_la_jornada_real_no_arranca_con_restos_de_una_prueba(tmp_path):
 def test_cabecera_user_agent():
     c = E.Cliente("https://ejemplo.invalid/", "u", "c")
     assert c.cabeceras["User-Agent"] and c.cabeceras["Authorization"].startswith("Basic ")
+
+
+def test_analisis_de_la_prueba_recuento_frente_a_proyeccion():
+    """`analisis_prueba.analizar`: distancia de cada envío al reparto final (el recuento del último)."""
+    from pipeline import analisis_prueba as A
+    def envio(n, esc, rec, proy=None):
+        r = {"envio": str(n), "hora": "", "escrutado": esc, "recuento": rec, "recuento_prov": {"28": rec},
+             "pct": {"PP": 30.0 + n, "PSOE": 30.0}}
+        if proy:
+            r |= {"proyeccion": proy, "proyeccion_prov": {"28": proy}, "proyeccion_pct": {"PP": 33.0, "PSOE": 30.0}, "margen": 1.0}
+        return r
+    serie = A.analizar([envio(1, 10, {"PP": 12, "PSOE": 20, "VOX": 6}, {"PP": 15, "PSOE": 17, "VOX": 6}),
+                        envio(2, 50, {"PP": 15, "PSOE": 18, "VOX": 5}, {"PP": 16, "PSOE": 17, "VOX": 5}),
+                        envio(3, 99, {"PP": 16, "PSOE": 17, "VOX": 5})])
+    assert [r["rec_mal"] for r in serie] == [4, 1, 0] and [r.get("proy_mal") for r in serie] == [1, 0, None]
+    assert serie[0]["dentro_margen"] and serie[0]["rec_err_pct"] == 2.0 and serie[0]["proy_err_pct"] == 0.0
+    texto = A.resumen(serie)
+    assert "más cerca del final que el recuento en 2" in texto and "sin proyección publicada" in texto
+    assert A.mal({"PP": 2}, {"PSOE": 2}) == 2 and A.resumen([]).startswith("No hay envíos")

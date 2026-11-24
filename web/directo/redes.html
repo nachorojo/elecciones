@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>29N · Piezas para redes</title>
+<!--
+  Piezas verticales del 29N para redes, dibujadas en un lienzo al tamaño nativo de cada formato y descargables en PNG.
+  Leen el mismo fichero que la web (../data/vivo_29n.json) y se refrescan cada 15 s.
+
+  Dirección: .../directo/redes.html?formato=FORMATO&tema=TEMA[&opción=valor…]
+    formato=historia   1080 × 1920 (9:16): historias de Instagram y Facebook. Texto entre y = 250 y 1580.
+    formato=reel       1080 × 1920 (9:16): Reels, TikTok y vídeo vertical. Texto entre y = 270 y 1250, y sin
+                       acercarse a la columna de iconos de la derecha (150 px).
+    formato=post       1080 × 1350 (4:5): publicación en el muro de Instagram, Facebook y X. Sin zonas tapadas.
+    tema=resultado | participacion | provincia&provincia=28      (resultado pasa solo a participación si aún no hay recuento)
+    guias              pinta en rojo las zonas que tapa la interfaz de cada red (no salen en el PNG descargado)
+    limpio             solo el lienzo, a tamaño real (para capturar con OBS como fuente «Navegador» de 1080 × 1920)
+    datos=simulacro | demo
+  Las zonas seguras NO son cifras oficiales: Meta y TikTok solo las publican para anuncios y cambian con cada versión
+  de la aplicación. Son un margen prudente sacado de varias guías (noviembre de 2026); comprobar con la vista previa.
+-->
+<style>
+  body { margin: 0; background: #0a0f1a; color: #fff; font-family: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
+  header.cabecera { padding: 18px 24px 6px; } header.cabecera h1 { font-size: 22px; margin: 0; }
+  header.cabecera p { margin: 6px 0 0; color: rgba(255,255,255,.66); font-size: 14px; max-width: 80ch; }
+  nav.menu { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 24px; }
+  nav.menu a { color: #fff; text-decoration: none; font-size: 14px; padding: 6px 12px; border-radius: 8px; background: rgba(255,255,255,.08); }
+  nav.menu a[aria-current] { background: #19c37d; color: #04150d; font-weight: 700; }
+  main { display: flex; flex-wrap: wrap; gap: 24px; padding: 12px 24px 40px; align-items: flex-start; }
+  .mandos { display: grid; gap: 14px; width: 300px; font-size: 15px; }
+  .mandos label { display: grid; gap: 5px; color: rgba(255,255,255,.75); }
+  .mandos select, .mandos button { font: inherit; padding: 9px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.25); background: #131b2c; color: #fff; }
+  .mandos button { background: #19c37d; color: #04150d; font-weight: 800; border: 0; cursor: pointer; }
+  .mandos .marca { display: flex; gap: 8px; align-items: center; }
+  .mandos p { margin: 0; font-size: 13px; line-height: 1.45; color: rgba(255,255,255,.6); }
+  .mandos code { font-size: 12px; word-break: break-all; color: #9fe3c4; }
+  canvas { display: block; max-height: 86vh; max-width: 100%; height: auto; width: auto; border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+  body.limpio header, body.limpio nav, body.limpio .mandos { display: none; }
+  body.limpio main { padding: 0; } body.limpio canvas { max-height: none; max-width: none; border-radius: 0; box-shadow: none; }
+</style>
+</head>
+<body>
+<header class="cabecera">
+  <h1>29N · Piezas para redes</h1>
+  <p>Imágenes verticales con el recuento del momento, al tamaño nativo de cada red. Se actualizan solas con cada envío de Interior; «Descargar PNG» guarda la que se ve.</p>
+</header>
+<main>
+  <div class="mandos">
+    <label>Formato
+      <select id="formato">
+        <option value="historia">Historia · 1080 × 1920 (Instagram, Facebook)</option>
+        <option value="reel">Reel / TikTok · 1080 × 1920 (zona central)</option>
+        <option value="post">Publicación · 1080 × 1350 (Instagram, Facebook, X)</option>
+      </select></label>
+    <label>Contenido
+      <select id="tema">
+        <option value="resultado">Resultado nacional</option>
+        <option value="participacion">Participación</option>
+        <option value="provincia">Una provincia</option>
+      </select></label>
+    <label id="l-prov" hidden>Provincia <select id="prov"></select></label>
+    <label>Datos
+      <select id="datos">
+        <option value="">Recuento real</option>
+        <option value="simulacro">Ensayo: simulacro de Interior</option>
+      </select></label>
+    <label class="marca"><input type="checkbox" id="guias"> Ver zonas que tapa cada red</label>
+    <button id="descargar">Descargar PNG</button>
+    <p id="estado"></p>
+    <p>Para OBS (vídeo vertical): fuente «Navegador» de <span id="medidas"></span> con esta dirección:<br><code id="url"></code></p>
+    <p>Las zonas seguras son un margen prudente, no una cifra oficial de las redes: comprobar con la vista previa antes de publicar.</p>
+  </div>
+  <canvas id="lienzo" width="1080" height="1920"></canvas>
+</main>
+<script src="../menu.js" data-base="../"></script>
+<script>
+const Q = new URLSearchParams(location.search);
+const NOMBRE = { PP: "PP", PSOE: "PSOE", VOX: "Vox", FA: "Frente Amplio", PODEMOS: "Podemos", SALF: "SALF", ERC: "ERC",
+  JUNTS: "Junts", EH_BILDU: "EH Bildu", PNV: "PNV", BNG: "BNG", CC: "Coalición Canaria", COMPROMIS: "Compromís",
+  NC: "NC-Podemos-IU", ADELANTE: "Adelante And.", TERUEL_EXISTE: "Teruel Existe", GBAI: "Geroa Bai", PACMA: "PACMA" };
+const CORTO = { PP: "PP", PSOE: "PSOE", VOX: "VOX", FA: "FA", PODEMOS: "POD", SALF: "SALF", ERC: "ERC", JUNTS: "JUNTS",
+  EH_BILDU: "BILDU", PNV: "PNV", BNG: "BNG", CC: "CC", COMPROMIS: "COMP", NC: "NC", ADELANTE: "ADEL", TERUEL_EXISTE: "TE", GBAI: "GBAI", PACMA: "PACMA" };
+const COLOR = { PP: "#1D84CE", PSOE: "#E30713", VOX: "#5BA82B", FA: "#E51C55", PODEMOS: "#6B2E7A", SALF: "#7A5230",
+  ERC: "#E0A020", JUNTS: "#00A99D", EH_BILDU: "#7BA21A", PNV: "#0F6B3C", BNG: "#5F93C0", CC: "#C9A400", COMPROMIS: "#D96A2B",
+  NC: "#3C8D5A", ADELANTE: "#2AA198", TERUEL_EXISTE: "#4B6B4F", GBAI: "#B0333A", PACMA: "#9BB52B" };
+// Reparto oficial de 2023 (anillo interior y comparación). PP incluye el escaño de UPN, hoy en coalición.
+// Avances de participación de las dos generales anteriores (Interior, vía la tabla de Wikipedia; ver escrutinio_29n.py).
+const AV_PREVIOS = [{ 2023: 40.48, 2019: 37.92 }, { 2023: 53.12, 2019: 56.86 }];
+const E2023 = { PP: 138, PSOE: 121, VOX: 33, ERC: 7, JUNTS: 7, EH_BILDU: 6, PNV: 5, BNG: 1, CC: 1 };
+// Escaños de 2023 por provincia de los espacios con continuidad (de web/data/resultados.json; PP incluye UPN).
+const E2023_PROV = {"01":{"PSOE":1,"EH_BILDU":1,"PP":1,"PNV":1},"02":{"PP":2,"PSOE":2},"03":{"PP":5,"PSOE":4,"VOX":2},"04":{"PP":3,"PSOE":2,"VOX":1},"05":{"PP":2,"PSOE":1},"06":{"PSOE":2,"PP":2,"VOX":1},"07":{"PP":3,"PSOE":3,"VOX":1},"08":{"PSOE":13,"PP":5,"ERC":4,"JUNTS":3,"VOX":2},"09":{"PP":2,"PSOE":2},"10":{"PSOE":2,"PP":2},"11":{"PP":4,"PSOE":3,"VOX":1},"12":{"PP":2,"PSOE":2,"VOX":1},"13":{"PP":2,"PSOE":2,"VOX":1},"14":{"PP":2,"PSOE":2,"VOX":1},"15":{"PP":4,"PSOE":2,"BNG":1},"16":{"PP":2,"PSOE":1},"17":{"PSOE":2,"JUNTS":2,"ERC":1},"18":{"PP":3,"PSOE":2,"VOX":1},"19":{"PP":1,"PSOE":1,"VOX":1},"20":{"EH_BILDU":2,"PSOE":2,"PNV":2},"21":{"PP":2,"PSOE":2,"VOX":1},"22":{"PP":2,"PSOE":1},"23":{"PP":2,"PSOE":2,"VOX":1},"24":{"PP":2,"PSOE":2},"25":{"PSOE":2,"ERC":1,"JUNTS":1},"26":{"PP":2,"PSOE":2},"27":{"PP":3,"PSOE":1},"28":{"PP":16,"PSOE":10,"VOX":5},"29":{"PP":5,"PSOE":3,"VOX":2},"30":{"PP":4,"PSOE":3,"VOX":2},"31":{"PSOE":2,"EH_BILDU":1,"PP":2},"32":{"PP":3,"PSOE":1},"33":{"PP":3,"PSOE":2,"VOX":1},"34":{"PP":2,"PSOE":1},"35":{"PSOE":3,"PP":3,"VOX":1},"36":{"PP":3,"PSOE":3},"37":{"PP":3,"PSOE":1},"38":{"PP":3,"PSOE":3,"CC":1},"39":{"PP":2,"PSOE":2,"VOX":1},"40":{"PP":2,"PSOE":1},"41":{"PSOE":5,"PP":4,"VOX":1},"42":{"PP":1,"PSOE":1},"43":{"PSOE":2,"ERC":1,"PP":1,"JUNTS":1},"44":{"PP":2,"PSOE":1},"45":{"PP":3,"PSOE":2,"VOX":1},"46":{"PP":6,"PSOE":5,"VOX":2},"47":{"PP":2,"PSOE":2,"VOX":1},"48":{"PNV":2,"PSOE":2,"EH_BILDU":2,"PP":1},"49":{"PP":2,"PSOE":1},"50":{"PP":3,"PSOE":2,"VOX":1},"51":{"PP":1},"52":{"PP":1}};
+const ARCO2023 = [["PP", 138], ["PSOE", 121], ["VOX", 33], ["SUMAR", 31], ["ERC", 7], ["JUNTS", 7], ["EH_BILDU", 6], ["PNV", 5], ["BNG", 1], ["CC", 1]];
+// Lienzo y zona útil (x0, y0, x1, y1) de cada formato. Fuera de la zona útil solo va el fondo.
+const FORMATOS = {
+  historia: { w: 1080, h: 1920, z: [64, 250, 1016, 1580], tapa: [[0, 0, 1080, 250], [0, 1580, 1080, 340]] },
+  reel:     { w: 1080, h: 1920, z: [64, 270, 930, 1250], tapa: [[0, 0, 1080, 270], [0, 1250, 1080, 670], [930, 270, 150, 980]] },
+  post:     { w: 1080, h: 1350, z: [64, 64, 1016, 1286], tapa: [] },
+};
+const TINTA = "#0d1320", TENUE = "rgba(255,255,255,.66)", ACENTO = "#19c37d", SUBE = "#3ddc84", BAJA = "#ff6b6b";
+const FUENTE = '"Inter", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif';
+const col = (f) => COLOR[f] || (f === "SUMAR" ? "#E51C55" : "#8D98A6");
+const nom = (p) => NOMBRE[p.f] || p.s;
+const $ = (s) => document.querySelector(s);
+const num = (x) => Math.round(x).toLocaleString("es-ES", { useGrouping: "always" });
+const dec = (x, d = 1) => Number(x).toLocaleString("es-ES", { minimumFractionDigits: d, maximumFractionDigits: d });
+const conEscano = (a) => [...a.partidos].sort((x, y) => y.e - x.e || y.v - x.v);
+const lienzo = $("#lienzo"), c = lienzo.getContext("2d");
+let D = null, firma = "";
+const E = { formato: Q.get("formato") || "historia", tema: Q.get("tema") || "resultado", prov: Q.get("provincia") || "28",
+            datos: Q.get("datos") || "", guias: Q.has("guias") };
+if (!FORMATOS[E.formato]) E.formato = "historia";
+
+/* ---------- utilidades de dibujo ---------- */
+function txt(t, x, y, tam, peso = 700, color = "#fff", alin = "left", ancho = 0) {
+  c.font = `${peso} ${tam}px ${FUENTE}`; c.fillStyle = color; c.textAlign = alin; c.textBaseline = "alphabetic";
+  let s = String(t);
+  if (ancho && c.measureText(s).width > ancho) { while (s.length > 1 && c.measureText(s + "…").width > ancho) s = s.slice(0, -1); s += "…"; }
+  c.fillText(s, x, y);
+  return c.measureText(s).width;
+}
+function caja(x, y, w, h, r, color) { c.fillStyle = color; c.beginPath(); c.roundRect(x, y, w, h, r); c.fill(); }
+function parrafo(t, x, y, ancho, tam, peso, color, alto) {
+  c.font = `${peso} ${tam}px ${FUENTE}`; c.fillStyle = color; c.textAlign = "left";
+  let linea = "", n = 0;
+  t.split(" ").forEach((pal) => {
+    if (c.measureText(linea + pal).width > ancho && linea) { c.fillText(linea.trim(), x, y + n * alto); linea = ""; n++; }
+    linea += pal + " ";
+  });
+  c.fillText(linea.trim(), x, y + n * alto);
+  return (n + 1) * alto;
+}
+function variacion(d, x, y, tam, alin = "right") {
+  return txt(d > 0 ? `+${d}` : d < 0 ? `−${-d}` : "=", x, y, tam, 800, d > 0 ? SUBE : d < 0 ? BAJA : TENUE, alin);
+}
+function fondo(F) {
+  const g = c.createRadialGradient(F.w * .3, F.h * .18, 0, F.w * .3, F.h * .18, F.h * .8);
+  g.addColorStop(0, "#1b2740"); g.addColorStop(1, "#0a0f1a");
+  c.fillStyle = g; c.fillRect(0, 0, F.w, F.h);
+}
+// Cabecera común. Devuelve la y donde sigue el contenido.
+function cabecera(F, titulo, dato, rotulo) {
+  const [x0, y0, x1] = F.z;
+  let x = x0 + txt("ELECCIONES GENERALES", x0, y0 + 34, 30, 800, "#fff") + 12;
+  x += txt("29N", x, y0 + 34, 30, 800, ACENTO) + 18;
+  if (D.simulacro) { caja(x, y0 + 6, 178, 36, 6, "#ffb020"); txt("SIMULACRO", x + 89, y0 + 32, 22, 800, "#1a1300", "center"); }
+  txt(titulo, x0, y0 + 104, 58, 800, "#fff", "left", x1 - x0 - (dato ? 330 : 0));
+  if (dato) { txt(dato, x1, y0 + 104, 76, 800, ACENTO, "right"); txt(rotulo, x1, y0 + 138, 24, 600, TENUE, "right"); }
+  return y0 + 160;
+}
+function pie(F) {
+  const [x0, , x1, y1] = F.z;
+  txt("Fuente: Ministerio del Interior" + (D.nacional.escrutado > 0 ? " · recuento provisional" : ""), x0, y1 - 6, 22, 600, TENUE);
+  if (D.hora) txt(D.hora, x1, y1 - 6, 22, 700, TENUE, "right");
+  return y1 - 44;
+}
+function arco(cx, cy, r1, r2, lista, opacidad, tam) {
+  let acum = 0;
+  if (!lista.length) lista = [[null, 350]];
+  lista.forEach(([f, e]) => {
+    const a0 = Math.PI + Math.PI * acum / 350, a1 = Math.PI + Math.PI * (acum + e) / 350;
+    c.beginPath(); c.arc(cx, cy, r2, a0, a1); c.arc(cx, cy, r1, a1, a0, true); c.closePath();
+    c.globalAlpha = f ? opacidad : 1; c.fillStyle = f ? col(f) : "rgba(255,255,255,.1)"; c.fill();
+    c.globalAlpha = 1; c.strokeStyle = TINTA; c.lineWidth = 3; c.stroke();
+    if (f && e >= 14) { const m = (a0 + a1) / 2, r = (r1 + r2) / 2; txt(e, cx + r * Math.cos(m), cy + r * Math.sin(m) + tam * .35, tam, 800, "#fff", "center"); }
+    acum += e;
+  });
+}
+// Filas de partidos entre y0 e y1. Si no caben todos los que tienen escaño, la última fila resume el resto.
+function filas(F, a, y0, y1, antes) {
+  const [x0, , x1] = F.z, w = x1 - x0;
+  let lista = conEscano(a).filter((p) => p.e > 0 || p.v >= 0.03 * a.validos);
+  if (!lista.length) { txt("Todavía no hay votos contados.", x0, y0 + 60, 34, 600, TENUE); return; }
+  const caben = Math.max(3, Math.floor((y1 - y0) / 62));
+  let resto = null;
+  if (lista.length > caben) { const cola = lista.slice(caben - 1); resto = { n: cola.length, e: cola.reduce((s, p) => s + p.e, 0) }; lista = lista.slice(0, caben - 1); }
+  const n = lista.length + (resto ? 1 : 0), alto = Math.min(96, (y1 - y0) / n), h = alto - 10, k = Math.min(1, h / 70);
+  const max = Math.max(...lista.map((p) => p.v));
+  lista.forEach((p, i) => {
+    const y = y0 + i * alto, base = y + h / 2;
+    caja(x0, y, w, h, 14, "rgba(255,255,255,.07)");
+    caja(x0, y, Math.max(14, (w - 0) * p.v / max * .999), h, 14, col(p.f) + "55");      // barra de voto, de fondo
+    caja(x0, y, 14, h, 7, col(p.f));
+    txt(nom(p), x0 + 34, base + 13 * k, 36 * k, 800, "#fff", "left", w - 430);
+    txt(dec(100 * p.v / a.validos, 1) + " %", x1 - 250, base + 11 * k, 30 * k, 600, TENUE, "right");
+    const b = antes ? (E2023[p.f] === undefined ? undefined : antes[p.f] || 0) : E2023[p.f];
+    txt(p.e, x1 - (b === undefined ? 24 : 96), base + 20 * k, 56 * k, 800, "#fff", "right");
+    if (b !== undefined) variacion(p.e - b, x1 - 20, base + 12 * k, 28 * k);
+  });
+  if (resto) {
+    const y = y0 + lista.length * alto, base = y + h / 2;
+    caja(x0, y, w, h, 14, "rgba(255,255,255,.07)");
+    txt(`Otras ${resto.n} candidaturas`, x0 + 34, base + 12 * k, 32 * k, 700, TENUE);
+    txt(resto.e, x1 - 24, base + 20 * k, 56 * k, 800, "#fff", "right");
+  }
+}
+
+/* ---------- las tres piezas ---------- */
+function resultado(F) {
+  const a = D.nacional, [x0, , x1] = F.z, w = x1 - x0;
+  let y = cabecera(F, "Escrutado", dec(a.escrutado, 1) + " %", "del censo");
+  const yPie = pie(F);
+  const disponible = yPie - y, R = Math.min(w / 2, disponible * .34), cx = x0 + w / 2, cy = y + R + 6;
+  arco(cx, cy, R * .67, R, conEscano(a).filter((p) => p.e > 0).map((p) => [p.f, p.e]), 1, R * .085);
+  arco(cx, cy, R * .40, R * .62, ARCO2023, .8, R * .06);
+  txt("Mayoría absoluta", cx, cy - R * .16, R * .058, 600, TENUE, "center");
+  txt("176", cx, cy - 4, R * .13, 800, "#fff", "center");
+  c.setLineDash([8, 6]); c.strokeStyle = "#fff"; c.lineWidth = 3; c.beginPath(); c.moveTo(cx, cy - R - 4); c.lineTo(cx, cy - R * .64); c.stroke(); c.setLineDash([]);
+  txt("Fuera, 2026 · dentro, 2023", cx, cy + 34, 22, 600, TENUE, "center");
+  txt("escaños y variación frente a 2023", x1, cy + 34 + 38, 20, 600, TENUE, "right");
+  filas(F, a, cy + 84, yPie, null);
+}
+function participacion(F) {
+  const a = D.nacional, av = a.avances || [0, 0], [x0, , x1] = F.z, w = x1 - x0, m = a.mesas || {};
+  let y = cabecera(F, "Participación", "", "");
+  const yPie = pie(F), hueco = yPie - y - 130, alto = Math.min(470, hueco / 2 - 16), k = alto / 470;
+  [["Avance de las 14:00", av[0], AV_PREVIOS[0]], ["Avance de las 18:00", av[1], AV_PREVIOS[1]]].forEach(([t, v, antes], i) => {
+    const yy = y + i * (alto + 24);
+    caja(x0, yy, w, alto, 24, "rgba(255,255,255,.07)");
+    txt(t, x0 + 40, yy + 66 * k, 38 * k, 700, TENUE);
+    if (v > 0) {
+      const an = txt(dec(v, 1), x0 + 36, yy + 250 * k, 200 * k, 800);
+      txt("%", x0 + 46 + an, yy + 250 * k, 90 * k, 800);
+      caja(x0 + 40, yy + 286 * k, w - 80, 20 * k, 10 * k, "rgba(255,255,255,.12)"); caja(x0 + 40, yy + 286 * k, (w - 80) * Math.min(100, v) / 100, 20 * k, 10 * k, ACENTO);
+      const d = v - antes[2023];
+      const an2 = txt((d > 0 ? "▲ " : d < 0 ? "▼ " : "= ") + dec(Math.abs(d), 2) + " puntos", x0 + 40, yy + 366 * k, 38 * k, 800, d > 0 ? SUBE : d < 0 ? BAJA : TENUE);
+      txt(" respecto a 2023", x0 + 40 + an2, yy + 366 * k, 38 * k, 600);
+      txt(`Julio de 2023: ${dec(antes[2023], 2)} %  ·  Noviembre de 2019: ${dec(antes[2019], 2)} %`, x0 + 40, yy + 420 * k, 27 * k, 600, TENUE);
+    } else { txt("– –", x0 + 36, yy + 230 * k, 120 * k, 800, "rgba(255,255,255,.25)"); txt("Pendiente", x0 + 40, yy + 366 * k, 38 * k, 600, TENUE); }
+  });
+  const yy = y + 2 * (alto + 24), mitad = (w - 20) / 2;
+  [[m.total ? dec(100 * m.constituidas / m.total, 1) + " %" : "—", "mesas constituidas"], [a.censo ? num(a.censo) : "—", "electores"]].forEach(([v, t], i) => {
+    caja(x0 + i * (mitad + 20), yy, mitad, 106, 18, "rgba(255,255,255,.07)");
+    txt(v, x0 + i * (mitad + 20) + 26, yy + 56, 46, 800); txt(t, x0 + i * (mitad + 20) + 26, yy + 88, 22, 600, TENUE);
+  });
+}
+function provincia(F) {
+  const a = D.provincias[E.prov], [x0, , x1] = F.z, w = x1 - x0;
+  if (!a) return;
+  let y = cabecera(F, a.nombre, a.escrutado > 0 ? dec(a.escrutado, 1) + " %" : "", "escrutado");
+  const yPie = pie(F);
+  txt(a.escanos_total + " escaños en juego", x0, y + 6, 32, 700, ACENTO);
+  y += 34;
+  // Barra de escaños de la provincia
+  const lista = conEscano(a).filter((p) => p.e > 0), paso = w / a.escanos_total;
+  let i = 0;
+  if (!lista.length) caja(x0, y, w, 46, 10, "rgba(255,255,255,.1)");
+  lista.forEach((p) => { for (let j = 0; j < p.e; j++, i++) caja(x0 + i * paso + 2, y, paso - 4, 46, 8, col(p.f)); });
+  y += 72;
+  let yFin = yPie;
+  if (a.escrutado > 0 && a.ultimo && Number(a.ultimo.ultima) > 0) {
+    const de = (cod) => { const p = a.partidos.find((x) => Number(x.c) === Number(cod)); return p ? nom(p) : "otra candidatura"; };
+    let t = "Último escaño: " + de(a.ultimo.ultima) + ".";
+    if (Number(a.ultimo.proxima) > 0) t += ` El siguiente sería para ${de(a.ultimo.proxima)}, a ${num(a.ultimo.faltan)} votos.`;
+    c.font = `600 30px ${FUENTE}`;
+    const lineas = c.measureText(t).width > w - 56 ? 2 : 1, alto = 38 + 40 * lineas;
+    yFin = yPie - alto - 14;
+    caja(x0, yFin + 10, w, alto, 16, ACENTO);
+    parrafo(t, x0 + 28, yFin + 10 + 48, w - 56, 30, 600, "#04150d", 40);
+  }
+  filas(F, a, y, yFin, E2023_PROV[E.prov] || {});
+}
+
+function pintar(conGuias) {
+  if (!D) return;
+  const F = FORMATOS[E.formato];
+  if (lienzo.width !== F.w || lienzo.height !== F.h) { lienzo.width = F.w; lienzo.height = F.h; }
+  fondo(F);
+  const hay = D.nacional.escrutado > 0;
+  (E.tema === "participacion" || (E.tema === "resultado" && !hay) ? participacion : E.tema === "provincia" ? provincia : resultado)(F);
+  if (conGuias) { c.fillStyle = "rgba(255,40,40,.32)"; F.tapa.forEach(([x, y, w, h]) => c.fillRect(x, y, w, h)); }
+}
+function sincronizar() {
+  $("#formato").value = E.formato; $("#tema").value = E.tema; $("#prov").value = E.prov; $("#datos").value = E.datos; $("#guias").checked = E.guias;
+  $("#l-prov").hidden = E.tema !== "provincia";
+  const F = FORMATOS[E.formato], q = new URLSearchParams({ formato: E.formato, tema: E.tema });
+  if (E.tema === "provincia") q.set("provincia", E.prov);
+  if (E.datos) q.set("datos", E.datos);
+  $("#medidas").textContent = `${F.w} × ${F.h}`;
+  $("#url").textContent = location.origin + location.pathname + "?" + q + "&limpio";
+  if (!Q.has("limpio")) history.replaceState(null, "", "?" + q + (E.guias ? "&guias" : ""));
+}
+async function cargar(forzar) {
+  const origen = { simulacro: "../data/simulacro_29n.json", demo: "../data/demo_29n.json" }[E.datos] || "../data/vivo_29n.json";
+  try {
+    const r = await fetch(origen, { cache: "no-store" });
+    if (!r.ok) return;
+    const t = await r.text();
+    if (t === firma && !forzar) return;
+    firma = t; D = JSON.parse(t);
+    const sel = $("#prov");
+    if (!sel.options.length) Object.entries(D.provincias).sort((x, y) => x[1].nombre.localeCompare(y[1].nombre, "es")).forEach(([k, a]) => sel.add(new Option(a.nombre, k)));
+    sincronizar(); pintar(E.guias);
+    const n = D.nacional;
+    $("#estado").textContent = (D.simulacro ? "SIMULACRO · " : "") + (n.escrutado > 0 ? `${dec(n.escrutado, 2)} % escrutado` : "sin recuento todavía") + (D.hora ? ` · datos de las ${D.hora}` : "");
+  } catch (e) { /* se mantiene lo último pintado */ }
+}
+[["formato", "formato"], ["tema", "tema"], ["prov", "prov"], ["datos", "datos"]].forEach(([id, k]) =>
+  $("#" + id).addEventListener("change", (ev) => { E[k] = ev.target.value; sincronizar(); k === "datos" ? cargar(true) : pintar(E.guias); }));
+$("#guias").addEventListener("change", (ev) => { E.guias = ev.target.checked; sincronizar(); pintar(E.guias); });
+$("#descargar").addEventListener("click", () => {
+  pintar(false);                                   // el PNG nunca lleva las guías
+  lienzo.toBlob((b) => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(b);
+    a.download = `29n_${E.tema}${E.tema === "provincia" ? "_" + E.prov : ""}_${E.formato}_${(D.hora || "").replace(":", "")}.png`;
+    a.click(); URL.revokeObjectURL(a.href); pintar(E.guias);
+  }, "image/png");
+});
+if (Q.has("limpio")) document.body.classList.add("limpio");
+cargar();
+setInterval(cargar, 15000);
+</script>
+</body>
+</html>

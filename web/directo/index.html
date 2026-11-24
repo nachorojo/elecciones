@@ -17,6 +17,7 @@
     vista=ticker         cinta inferior que corre con los escaños más disputados: las n=5 provincias donde a la
                          candidatura siguiente le faltan menos votos para quitar el último escaño (superpuesta).
                          minimo=50 (% escrutado de la provincia para entrar); velocidad=140 (píxeles por segundo)
+    (piezas verticales para redes, en otra página: redes.html)
     vista=bucle          pantalla completa: todos los gráficos, uno tras otro (cada=12 segundos por gráfico;
                          vistas=arco,participacion,columna,faldon,provincia; provincias=28,08,46,41,29,48,50).
                          Antes del escrutinio solo alterna participación y faldón.
@@ -83,6 +84,8 @@
   #faldon .ficha .esc { font-size: 50px; font-weight: 800; line-height: 1; letter-spacing: -.02em; }
   #faldon .ficha .esc small { font-size: 22px; font-weight: 700; margin-left: 8px; }
   #faldon .ficha .pct { font-size: 19px; color: var(--tenue); }
+  #faldon .pista.previa { grid-template-columns: repeat(3, 1fr); }
+  #faldon .pista.previa .ficha { padding: 0 34px; } #faldon .pista.previa .ficha .esc { font-size: 54px; }
   #faldon .pie { position: absolute; right: 76px; bottom: 20px; font-size: 17px; color: #fff; opacity: .85;
                  text-shadow: 0 1px 3px rgba(0, 0, 0, .8); }
   @keyframes entra { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
@@ -97,7 +100,7 @@
   #columna .escr { margin: 16px 0 14px; padding: 10px 16px; border-radius: 12px; background: var(--panel2);
                    display: flex; align-items: baseline; justify-content: space-between; }
   #columna .escr span { font-size: 18px; color: var(--tenue); font-weight: 600; }
-  #columna .escr b { font-size: 40px; font-weight: 800; letter-spacing: -.02em; }
+  #columna .escr b { white-space: nowrap; margin-left: 10px; font-size: 40px; font-weight: 800; letter-spacing: -.02em; }
   #columna .filas { flex: 1; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
   #columna .fila { display: grid; grid-template-columns: 1fr 78px 62px; align-items: center; height: 50px; flex: none;
                    border-radius: 9px; padding: 0 14px; font-size: 24px; font-weight: 700; }
@@ -105,6 +108,8 @@
   #columna .fila .e { text-align: right; font-size: 30px; font-weight: 800; }
   #columna .fila .d { text-align: right; font-size: 19px; background: rgba(0, 0, 0, .28); border-radius: 6px;
                       padding: 4px 6px; margin-left: 8px; }
+  #columna .filas .caja { flex: none; padding: 14px 18px; margin-bottom: 6px; } #columna .filas .caja b { font-size: 42px; }
+  #columna .filas .vacio { font-size: 24px; margin-top: 14px; align-self: flex-start; }
   #columna .pie { margin-top: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 20px; font-weight: 700; }
   #columna .pie span { color: var(--tenue); font-weight: 600; }
 
@@ -131,6 +136,13 @@
   .tabla .f .pct { text-align: right; font-size: 27px; font-weight: 600; color: var(--tenue); }
   .tabla .f .esc { text-align: right; font-size: 48px; font-weight: 800; letter-spacing: -.02em; line-height: 1; }
   .tabla .f .esc small { display: block; font-size: 20px; margin-top: 3px; }
+  .tabla.densa { gap: 6px; }
+  .tabla.densa .f { padding: 4px 18px 4px 8px; grid-template-columns: 46px 1fr 150px 130px; }
+  .tabla.densa .f .logo { width: 46px; height: 46px; font-size: 13px; border-radius: 8px; }
+  .tabla.densa .f .nom { font-size: 25px; } .tabla.densa .f .nom small { font-size: 15px; }
+  .tabla.densa .f .pct { font-size: 23px; } .tabla.densa .f .esc { font-size: 36px; }
+  .tabla.densa .f .esc { white-space: nowrap; } .tabla.densa .f .esc small { display: inline; font-size: 19px; margin: 0 0 0 10px; }
+  .tabla.densa .f .esc .vs { display: none; }
   #participacion .lleno { grid-template-rows: auto 1fr auto; }
   #participacion .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: stretch; }
   #participacion .av { background: var(--panel2); border-radius: 24px; padding: 40px 48px; display: flex; flex-direction: column; justify-content: center; }
@@ -227,6 +239,8 @@ const COLOR = { PP: "#1D84CE", PSOE: "#E30713", VOX: "#5BA82B", FA: "#E51C55", P
 // Avances de participación de las dos generales anteriores (Interior, vía la tabla de Wikipedia; ver escrutinio_29n.py).
 const AV_PREVIOS = [{ 2023: 40.48, 2019: 37.92 }, { 2023: 53.12, 2019: 56.86 }];
 const E2023 = { PP: 138, PSOE: 121, VOX: 33, ERC: 7, JUNTS: 7, EH_BILDU: 6, PNV: 5, BNG: 1, CC: 1 };
+// Escaños de 2023 por provincia de los espacios con continuidad (de web/data/resultados.json; PP incluye UPN).
+const E2023_PROV = {"01":{"PSOE":1,"EH_BILDU":1,"PP":1,"PNV":1},"02":{"PP":2,"PSOE":2},"03":{"PP":5,"PSOE":4,"VOX":2},"04":{"PP":3,"PSOE":2,"VOX":1},"05":{"PP":2,"PSOE":1},"06":{"PSOE":2,"PP":2,"VOX":1},"07":{"PP":3,"PSOE":3,"VOX":1},"08":{"PSOE":13,"PP":5,"ERC":4,"JUNTS":3,"VOX":2},"09":{"PP":2,"PSOE":2},"10":{"PSOE":2,"PP":2},"11":{"PP":4,"PSOE":3,"VOX":1},"12":{"PP":2,"PSOE":2,"VOX":1},"13":{"PP":2,"PSOE":2,"VOX":1},"14":{"PP":2,"PSOE":2,"VOX":1},"15":{"PP":4,"PSOE":2,"BNG":1},"16":{"PP":2,"PSOE":1},"17":{"PSOE":2,"JUNTS":2,"ERC":1},"18":{"PP":3,"PSOE":2,"VOX":1},"19":{"PP":1,"PSOE":1,"VOX":1},"20":{"EH_BILDU":2,"PSOE":2,"PNV":2},"21":{"PP":2,"PSOE":2,"VOX":1},"22":{"PP":2,"PSOE":1},"23":{"PP":2,"PSOE":2,"VOX":1},"24":{"PP":2,"PSOE":2},"25":{"PSOE":2,"ERC":1,"JUNTS":1},"26":{"PP":2,"PSOE":2},"27":{"PP":3,"PSOE":1},"28":{"PP":16,"PSOE":10,"VOX":5},"29":{"PP":5,"PSOE":3,"VOX":2},"30":{"PP":4,"PSOE":3,"VOX":2},"31":{"PSOE":2,"EH_BILDU":1,"PP":2},"32":{"PP":3,"PSOE":1},"33":{"PP":3,"PSOE":2,"VOX":1},"34":{"PP":2,"PSOE":1},"35":{"PSOE":3,"PP":3,"VOX":1},"36":{"PP":3,"PSOE":3},"37":{"PP":3,"PSOE":1},"38":{"PP":3,"PSOE":3,"CC":1},"39":{"PP":2,"PSOE":2,"VOX":1},"40":{"PP":2,"PSOE":1},"41":{"PSOE":5,"PP":4,"VOX":1},"42":{"PP":1,"PSOE":1},"43":{"PSOE":2,"ERC":1,"PP":1,"JUNTS":1},"44":{"PP":2,"PSOE":1},"45":{"PP":3,"PSOE":2,"VOX":1},"46":{"PP":6,"PSOE":5,"VOX":2},"47":{"PP":2,"PSOE":2,"VOX":1},"48":{"PNV":2,"PSOE":2,"EH_BILDU":2,"PP":1},"49":{"PP":2,"PSOE":1},"50":{"PP":3,"PSOE":2,"VOX":1},"51":{"PP":1},"52":{"PP":1}};
 const ARCO2023 = [["PP", 138], ["PSOE", 121], ["VOX", 33], ["SUMAR", 31], ["ERC", 7], ["JUNTS", 7], ["EH_BILDU", 6], ["PNV", 5], ["BNG", 1], ["CC", 1]];
 const col = (f) => COLOR[f] || (f === "SUMAR" ? "#E51C55" : "#8D98A6");
 const nom = (p) => NOMBRE[p.f] || p.s;
@@ -248,7 +262,8 @@ function logo(p) {
   return d;
 }
 function delta(p, antes) {
-  const base = antes ? antes[p.f] : E2023[p.f];
+  // Con `antes` (una provincia): los espacios con continuidad que no tuvieron escaño allí se comparan con 0.
+  const base = antes ? (E2023[p.f] === undefined ? undefined : antes[p.f] || 0) : E2023[p.f];
   if (base === undefined) return null;
   const d = p.e - base;
   return el("span", "delta " + (d > 0 ? "sube" : d < 0 ? "baja" : "igual"), d > 0 ? `+${d}` : d < 0 ? `−${-d}` : "=");
@@ -301,13 +316,14 @@ function hemiciclo(a) {
 function tabla(cont, a, antes, max) {
   cont.replaceChildren();
   const lista = conEscano(a).filter((p) => p.e > 0 || p.v >= 0.02 * a.validos).slice(0, max);
+  cont.classList.toggle("densa", lista.length > 9);      // con más de nueve filas se aprietan para que quepan todas
   if (!lista.length) { cont.appendChild(el("div", "vacio", "Todavía no hay votos contados.")); return; }
   lista.forEach((p) => {
     const f = el("div", "f");
     const n = el("div", "nom", nom(p));
     n.appendChild(el("small", null, num(p.v) + " votos"));
     const e = el("div", "esc", String(p.e));
-    const d = delta(p, antes); if (d) { const s = el("small"); s.appendChild(d); s.append(antes ? " vs 2023" : " vs 2023"); e.appendChild(s); }
+    const d = delta(p, antes); if (d) { const s = el("small"); s.appendChild(d); s.appendChild(el("span", "vs", " vs 2023")); e.appendChild(s); }
     f.append(logo(p), n, el("div", "pct", dec(100 * p.v / a.validos, 1) + " %"), e);
     cont.appendChild(f);
   });
@@ -317,12 +333,18 @@ function cajas(cont, datos) {
   datos.forEach(([v, t]) => { const c = el("div", "caja"); c.append(el("b", null, v), el("span", null, t)); cont.appendChild(c); });
 }
 
+// Antes del escrutinio: mesas constituidas y avances de participación (lo que haya llegado), como pares [valor, rótulo].
+function previa(a) {
+  const m = a.mesas || {}, av = a.avances || [];
+  return [[m.total ? dec(100 * m.constituidas / m.total, 1) + " %" : "—", "mesas constituidas"],
+          [av[0] > 0 ? dec(av[0], 2) + " %" : "—", "participación a las 14:00"], [av[1] > 0 ? dec(av[1], 2) + " %" : "—", "participación a las 18:00"]];
+}
 function pintarFaldon() {
   const a = D.nacional, hay = a.escrutado > 0, av = a.avances || [];
   if (hay) { $("#f-t").textContent = "Escrutado"; $("#f-n").textContent = dec(a.escrutado, 1) + " %"; }
   else if (av[1] > 0 || av[0] > 0) { $("#f-t").textContent = "Participación " + (av[1] > 0 ? "18:00" : "14:00"); $("#f-n").textContent = dec(av[1] > 0 ? av[1] : av[0], 1) + " %"; }
   else { $("#f-t").textContent = "Elecciones 29N"; $("#f-n").textContent = "20:00"; }
-  $("#f-h").textContent = hay && D.hora ? "Actualizado a las " + D.hora : hay ? "" : "Inicio del escrutinio";
+  $("#f-h").textContent = hay && D.hora ? "Actualizado a las " + D.hora : hay ? "" : av[0] > 0 ? "Fuente: Ministerio del Interior" : "Inicio del escrutinio";
   const lista = conEscano(a).filter((p) => p.e > 0 || p.v >= 0.02 * a.validos);
   const pista = $("#f-pista");
   pista.replaceChildren();
@@ -336,13 +358,29 @@ function pintarFaldon() {
     f.append(logo(p), t);
     pista.appendChild(f);
   });
-  if (!lista.length) pista.appendChild(el("div", "ficha", ""));
-  $("#f-pie").textContent = (D.simulacro ? "SIMULACRO · " : "") + "Escaños · mayoría absoluta 176 · " + (paginas > 1 ? `${pagina % paginas + 1}/${paginas}` : "") + " · Fuente: Ministerio del Interior";
+  if (!lista.length && !hay) {            // sin recuento: la barra enseña la participación comparada con 2023
+    pista.classList.add("previa");
+    const m = a.mesas || {};
+    [["Mesas constituidas", m.total ? dec(100 * m.constituidas / m.total, 1) + " %" : "—", m.total ? num(m.total) + " mesas" : ""],
+     ["Participación a las 14:00", av[0] > 0 ? dec(av[0], 2) + " %" : "—", av[0] > 0 ? AV_PREVIOS[0][2023] : null],
+     ["Participación a las 18:00", av[1] > 0 ? dec(av[1], 2) + " %" : "—", av[1] > 0 ? AV_PREVIOS[1][2023] : null]].forEach(([t, v, ref], k) => {
+      const f = el("div", "ficha"), c = el("div");
+      const pie = el("div", "pct");
+      if (typeof ref === "number") {
+        const d = (k === 1 ? av[0] : av[1]) - ref;
+        pie.append(el("span", "delta " + (d > 0 ? "sube" : d < 0 ? "baja" : "igual"), (d > 0 ? "▲ " : d < 0 ? "▼ " : "= ") + dec(Math.abs(d), 2)), ` puntos · en 2023, ${dec(ref, 2)} %`);
+      } else pie.textContent = ref || (k ? "pendiente" : "");
+      c.append(el("div", "nom", t), el("div", "esc", v), pie);
+      f.appendChild(c); pista.appendChild(f);
+    });
+  } else { pista.classList.remove("previa"); if (!lista.length) pista.appendChild(el("div", "ficha", "")); }
+  $("#f-pie").textContent = (D.simulacro ? "SIMULACRO · " : "") + (hay ? "Escaños · mayoría absoluta 176 · " + (paginas > 1 ? `${pagina % paginas + 1}/${paginas} · ` : "") : "") + "Fuente: Ministerio del Interior";
 }
 function pintarColumna() {
   const a = D.nacional;
-  $("#c-t").textContent = D.simulacro ? "Simulacro · escrutado" : "Escrutado";
-  $("#c-n").textContent = dec(a.escrutado, 2) + " %";
+  const hay = a.escrutado > 0, av = a.avances || [];
+  $("#c-t").textContent = (D.simulacro ? "Simulacro · " : "") + (hay ? "escrutado" : av[1] > 0 ? "participación 18:00" : av[0] > 0 ? "participación 14:00" : "escrutado");
+  $("#c-n").textContent = hay ? dec(a.escrutado, 2) + " %" : av[1] > 0 ? dec(av[1], 2) + " %" : av[0] > 0 ? dec(av[0], 2) + " %" : "0,00 %";
   $("#c-h").textContent = D.hora || "";
   const cont = $("#c-filas");
   cont.replaceChildren();
@@ -353,16 +391,19 @@ function pintarColumna() {
     f.append(el("div", "n", nom(p)), el("div", "e", String(p.e)), dd);
     cont.appendChild(f);
   });
-  if (!cont.children.length) cont.appendChild(el("div", "vacio", "El escrutinio empieza a las 20:00"));
+  if (!cont.children.length) {
+    previa(a).forEach(([v, t]) => { const c = el("div", "caja"); c.append(el("b", null, v), el("span", null, t)); cont.appendChild(c); });
+    cont.appendChild(el("div", "vacio", "El escrutinio empieza a las 20:00"));
+  }
 }
 function pintarArco() {
   const a = D.nacional;
   $("#a-sello").hidden = !D.simulacro;
   $("#a-h").textContent = a.escrutado > 0 && D.hora ? "Actualizado a las " + D.hora : "";
   $("#a-svg").replaceChildren(hemiciclo(a));
-  cajas($("#a-cajas"), [[dec(a.escrutado, 2) + " %", "escrutado"], [a.escrutado > 0 ? dec(a.participacion_residentes, 2) + " %" : "—", "participación"],
-                        [num(a.validos), "votos válidos"]]);
-  tabla($("#a-tabla"), a, null, 9);
+  cajas($("#a-cajas"), a.escrutado > 0 ? [[dec(a.escrutado, 2) + " %", "escrutado"], [dec(a.participacion_residentes, 2) + " %", "participación"],
+                        [num(a.validos), "votos válidos"]] : previa(a));
+  tabla($("#a-tabla"), a, null, 14);
 }
 function pintarParticipacion() {
   const a = D.nacional, av = a.avances || [0, 0];
@@ -400,7 +441,7 @@ function pintarProvincia() {
     u.replaceChildren(el("b", null, "Último escaño: "), sig(a.ultimo.ultima) + ". ");
     if (Number(a.ultimo.proxima) > 0) u.append("El siguiente sería para ", el("b", null, sig(a.ultimo.proxima)), `, a ${num(a.ultimo.faltan)} votos.`);
   }
-  tabla($("#v-tabla"), a, null, 7);
+  tabla($("#v-tabla"), a, E2023_PROV[cod] || {}, 9);
   cajas($("#v-cajas"), [[dec(a.escrutado, 2) + " %", "escrutado"], [a.escrutado > 0 ? dec(a.participacion_residentes, 2) + " %" : "—", "participación"],
                         [num(a.validos), "votos válidos"]]);
 }

@@ -7,6 +7,7 @@
     ["Simulador de escaños", "index.html?simulador"],
     ["Proyección de la noche", "proyeccion.html"],
     ["Gráficos de directo (OBS)", "directo/galeria.html"],
+    ["Piezas para redes", "directo/redes.html"],
     ["Pantallas exteriores", "pantallas.html"],
   ];
   const aqui = location.pathname.replace(/\/$/, "/index.html");
