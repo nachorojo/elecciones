@@ -62,7 +62,8 @@ class Guardado:
 
 
 def capturar(cliente, envio: str, carpeta: Path, provincias: list[str], base: dict | None,
-             simulacro: bool = False, salida_web: Path = E.VIVO, guardar_bruto: bool = True) -> dict:
+             simulacro: bool = False, salida_web: Path = E.VIVO, guardar_bruto: bool = True,
+             hoy: datetime | None = None) -> dict:
     """Descarga (o relee) un envío, lo guarda y devuelve un resumen. No lanza si falla una provincia."""
     ahora = datetime.now()
     destino = carpeta / f"envio_{envio}_{ahora:%Y%m%d-%H%M%S}" if guardar_bruto else Path(cliente.carpeta)
@@ -96,9 +97,19 @@ def capturar(cliente, envio: str, carpeta: Path, provincias: list[str], base: di
         # En el simulacro del 18-N un envío de totales llegó a cero con el recuento al 85 %. Si el recuento
         # retrocede respecto a lo ya publicado, no se pisa la página: se anota y se espera al siguiente.
         previo = _escrutado_publicado(salida_web, simulacro)
-        if n["escrutado"] < previo:
+        dias = _antiguedad(E.leer_totales(E.texto(tot))[0]["fecha"], hoy)
+        if dias is not None and dias > 1:
+            # Antes de empezar, el servicio puede seguir sirviendo el último envío de una prueba anterior (casi al
+            # 100 %). Publicarlo dejaría la página con datos viejos y, además, bloquearía el recuento nuevo por «retroceso».
+            fallos.append(f"totales.csv: datos de hace {dias} días (de una prueba anterior); no se publica")
+            resumen["antiguo"] = True
+        elif n["escrutado"] < previo and _RETROCESOS.get(salida_web, 0) < 1:
+            _RETROCESOS[salida_web] = _RETROCESOS.get(salida_web, 0) + 1
             fallos.append(f"totales.csv: el recuento retrocede ({previo} % -> {n['escrutado']} %); no se publica")
         else:
+            # Un retroceso aislado es un envío defectuoso; si el siguiente también va por debajo, es que Interior ha
+            # reiniciado el recuento (empieza otra prueba, o la jornada real): se acepta.
+            _RETROCESOS[salida_web] = 0
             E.guardar(web, salida_web)
             # Resumen para terceros (pantallas en la calle), junto al fichero de la web y con los mismos datos.
             E.guardar_pantallas(web, envio, salida_web.with_name("pantallas_29n.json"))
@@ -122,7 +133,7 @@ def capturar(cliente, envio: str, carpeta: Path, provincias: list[str], base: di
             proy["nombres"] = {k: a["nombre"] for k, a in web["provincias"].items()}
         (destino / "proyeccion.json").write_text(json.dumps(proy, ensure_ascii=False, indent=1), encoding="utf-8")
         # Copia para la página oculta web/proyeccion.html (se publica junto al recuento; no está enlazada desde la web).
-        if not any("retrocede" in f for f in fallos):
+        if not any("no se publica" in f for f in fallos):
             E.guardar(proy, salida_web.with_name("proyeccion_29n.json"))
         resumen |= {"proyeccion": proy["nacional"]["escanos"], "margen": proy["margen"]["escanos_media"],
                     "escrutado_municipios": proy["escrutado"]}
@@ -131,6 +142,17 @@ def capturar(cliente, envio: str, carpeta: Path, provincias: list[str], base: di
 
 
 RECHAZOS = 3
+_RETROCESOS: dict[Path, int] = {}                    # retrocesos seguidos sin publicar, por fichero de salida
+
+
+def _antiguedad(fecha: str, hoy: datetime | None) -> int | None:
+    """Días entre la fecha de totalización de Interior (YYMMddHHmm) y hoy. None si no se comprueba o no se entiende."""
+    if hoy is None:
+        return None
+    try:
+        return abs((hoy.date() - datetime.strptime(fecha[:6], "%y%m%d").date()).days)
+    except ValueError:
+        return None
 
 
 def _rechazo(e: Exception) -> bool:
@@ -248,13 +270,13 @@ def main() -> None:
         try:
             envio = cliente.envio()
             if envio != ultimo:
-                r = capturar(cliente, envio, a.carpeta, provincias, base, a.simulacro)
+                r = capturar(cliente, envio, a.carpeta, provincias, base, a.simulacro, hoy=datetime.now())
                 _anotar(a.carpeta, r)
                 linea = f"{r['capturado']}  envío {envio}  escrutado {r.get('escrutado', '?')} %  {r.get('escanos', {})}"
                 if "proyeccion" in r:
                     linea += f"  | proyección {r['proyeccion']} (±{r['margen']})"
                 print(linea + (f"  | {len(r['fallos'])} fallos: {r['fallos'][:2]}" if r["fallos"] else ""))
-                if a.publicar and "escrutado" in r:
+                if a.publicar and "escrutado" in r and not r.get("antiguo"):
                     error = publicar(E.VIVO, f"29N: envío {envio} ({r['escrutado']} % escrutado)")
                     if error:
                         print("   no se pudo publicar ->", error)

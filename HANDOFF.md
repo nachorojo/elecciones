@@ -8,7 +8,7 @@ Horario de Interior: 15:00 constitución, 15:30 primer avance, 16:00 segundo ava
 17:30 escrutinio del Senado. Es el ensayo general del domingo: mismos pasos que en el apartado 0, con `--simulacro`.
 
 1. Antes de las 14:45, en PowerShell dentro de `repo`: `git pull origin claude/peaceful-dijkstra-9hbim8` (trae los cambios del 24-N),
-   `pip install -r requirements.txt` y `python -m pytest tests/test_captura_29n.py tests/test_escrutinio_29n.py -q` → `23 passed`.
+   `pip install -r requirements.txt` y `python -m pytest tests/test_captura_29n.py tests/test_escrutinio_29n.py -q` → `25 passed`.
 2. Pasos 6, 7 y 8 del apartado 0 (variables con comillas simples, `curl` → `200`, `git push --dry-run`).
 3. A las 14:50: `python -m pipeline.captura_29n --simulacro --publicar`
 4. Qué mirar (es la primera vez que se ve en vivo): de 15:00 a 16:30 la página y `directo/?vista=participacion` deben enseñar mesas
@@ -43,7 +43,7 @@ hasta pasada la medianoche, y alguien que mire la ventana de vez en cuando. Un s
 1. En PowerShell, dentro de la carpeta `repo` (no en la de arriba):
    `git pull`
 2. `pip install -r requirements.txt`
-3. `python -m pytest tests/test_captura_29n.py tests/test_escrutinio_29n.py -q` → debe acabar en `23 passed`.
+3. `python -m pytest tests/test_captura_29n.py tests/test_escrutinio_29n.py -q` → debe acabar en `25 passed`.
 4. Comprobar que la página del 29N está vacía (0 % escrutado, sin rótulo de simulacro). Si no lo está:
    `python -m pipeline.escrutinio_29n --vacio`, y después `git add web/data/vivo_29n.json`, `git commit -m "29N: página vacía"`, `git push`.
 5. Quitar la suspensión automática del PC para el domingo.

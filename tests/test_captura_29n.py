@@ -144,6 +144,9 @@ def test_no_se_publica_un_recuento_que_retrocede(base, tmp_path):
     (envio / "totales.csv").write_text(E.escribir_totales(regs), encoding="utf-8")
     r = K.capturar(K.Guardado(envio), "9", tmp_path, base["provincias"], None, simulacro=True, salida_web=web, guardar_bruto=False)
     assert any("retrocede" in f for f in r["fallos"]) and web.read_text(encoding="utf-8") == antes
+    # Si el siguiente envío también va por debajo, Interior ha reiniciado el recuento (otra prueba, o la jornada real).
+    r = K.capturar(K.Guardado(envio), "10", tmp_path, base["provincias"], None, simulacro=True, salida_web=web, guardar_bruto=False)
+    assert not any("retrocede" in f for f in r["fallos"]) and json.loads(web.read_text(encoding="utf-8"))["nacional"]["escrutado"] == 0
     # Una sesión real (no simulacro) sí empieza de cero aunque el fichero publicado sea el del simulacro.
     K.capturar(K.Guardado(envio), "1", tmp_path, base["provincias"], None, simulacro=False, salida_web=web, guardar_bruto=False)
     assert json.loads(web.read_text(encoding="utf-8"))["nacional"]["escrutado"] == 0
@@ -275,3 +278,18 @@ def test_analisis_de_la_prueba_recuento_frente_a_proyeccion():
     texto = A.resumen(serie)
     assert "más cerca del final que el recuento en 2" in texto and "sin proyección publicada" in texto
     assert A.mal({"PP": 2}, {"PSOE": 2}) == 2 and A.resumen([]).startswith("No hay envíos")
+
+
+def test_no_se_publican_datos_de_una_prueba_anterior(base, tmp_path):
+    """Antes de empezar, el servicio puede seguir dando el último envío de la prueba anterior: se guarda, no se publica."""
+    from datetime import datetime
+    envio = tmp_path / "envio_130_20261118-212600"            # la noche ficticia lleva fecha de totalización del 18-N
+    _noche_ficticia(base, envio)
+    web = tmp_path / "vivo.json"
+    r = K.capturar(K.Guardado(envio), "130", tmp_path, ["28"], None, simulacro=True, salida_web=web, guardar_bruto=False,
+                   hoy=datetime(2026, 11, 25, 14, 50))
+    assert r["antiguo"] and "hace 7 días" in r["fallos"][-1] and not web.exists()
+    # El mismo día, o pasada la medianoche de la noche electoral, sí se publica.
+    r = K.capturar(K.Guardado(envio), "130", tmp_path, ["28"], None, simulacro=True, salida_web=web, guardar_bruto=False,
+                   hoy=datetime(2026, 11, 19, 0, 20))
+    assert "antiguo" not in r and web.exists()
