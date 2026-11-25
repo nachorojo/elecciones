@@ -289,6 +289,17 @@ def test_no_se_publican_datos_de_una_prueba_anterior(base, tmp_path):
     r = K.capturar(K.Guardado(envio), "130", tmp_path, ["28"], None, simulacro=True, salida_web=web, guardar_bruto=False,
                    hoy=datetime(2026, 11, 25, 14, 50))
     assert r["antiguo"] and "hace 7 días" in r["fallos"][-1] and not web.exists()
+    # Sin recuento (constitución y avances) la fecha antigua no bloquea: en la prueba del 25-N Interior sirvió así los totales.
+    regs = E.leer_totales((envio / "totales.csv").read_text(encoding="utf-8"))
+    for x in regs:
+        x.update(censo_escrutado=0, pct_escrutado=0, votantes=0, blancos=0, partidos=[])
+    cero = tmp_path / "envio_1_20261125-150000"
+    cero.mkdir()
+    (cero / "totales.csv").write_text(E.escribir_totales(regs), encoding="utf-8")
+    r = K.capturar(K.Guardado(cero), "1", tmp_path, [], None, simulacro=True, salida_web=web, guardar_bruto=False,
+                   hoy=datetime(2026, 11, 25, 15, 0))
+    assert "antiguo" not in r and json.loads(web.read_text(encoding="utf-8"))["nacional"]["escrutado"] == 0
+    web.unlink()
     # El mismo día, o pasada la medianoche de la noche electoral, sí se publica.
     r = K.capturar(K.Guardado(envio), "130", tmp_path, ["28"], None, simulacro=True, salida_web=web, guardar_bruto=False,
                    hoy=datetime(2026, 11, 19, 0, 20))

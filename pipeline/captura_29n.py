@@ -98,7 +98,9 @@ def capturar(cliente, envio: str, carpeta: Path, provincias: list[str], base: di
         # retrocede respecto a lo ya publicado, no se pisa la página: se anota y se espera al siguiente.
         previo = _escrutado_publicado(salida_web, simulacro)
         dias = _antiguedad(E.leer_totales(E.texto(tot))[0]["fecha"], hoy)
-        if dias is not None and dias > 1:
+        # Solo con recuento: antes del escrutinio Interior sirve un fichero de totales a cero con fecha antigua
+        # (prueba del 25-N: fecha del 18-N durante la constitución y los avances), y eso sí hay que publicarlo.
+        if dias is not None and dias > 1 and n["escrutado"] > 0:
             # Antes de empezar, el servicio puede seguir sirviendo el último envío de una prueba anterior (casi al
             # 100 %). Publicarlo dejaría la página con datos viejos y, además, bloquearía el recuento nuevo por «retroceso».
             fallos.append(f"totales.csv: datos de hace {dias} días (de una prueba anterior); no se publica")
@@ -245,6 +247,9 @@ def main() -> None:
     ap.add_argument("--cada", type=float, default=0, metavar="MIN",
                     help="con --publicar: sube a GitHub como mucho una vez cada MIN minutos (cada subida es un despliegue "
                          "de Netlify). Los envíos intermedios se confirman en local y suben juntos. Por defecto, todos.")
+    ap.add_argument("--aceptar-antiguos", action="store_true",
+                    help="publica también recuentos con fecha de totalización de hace más de un día (por defecto se "
+                         "descartan como restos de una prueba anterior)")
     ap.add_argument("--sin-proyeccion", action="store_true")
     ap.add_argument("--repetir", type=Path, help="carpeta de un envío ya guardado: lo reprocesa sin conectarse")
     ap.add_argument("--mesas", action="store_true", help="baja los ficheros por mesa de las 52 provincias y termina")
@@ -275,7 +280,8 @@ def main() -> None:
         try:
             envio = cliente.envio()
             if envio != ultimo:
-                r = capturar(cliente, envio, a.carpeta, provincias, base, a.simulacro, hoy=datetime.now())
+                r = capturar(cliente, envio, a.carpeta, provincias, base, a.simulacro,
+                             hoy=None if a.aceptar_antiguos else datetime.now())
                 _anotar(a.carpeta, r)
                 linea = f"{r['capturado']}  envío {envio}  escrutado {r.get('escrutado', '?')} %  {r.get('escanos', {})}"
                 if "proyeccion" in r:
