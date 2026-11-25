@@ -1,4 +1,5 @@
 tipo;id;nombre;escanos;votos;porcentaje;escanos_2023
-general;actualizado;;;;;
-general;escrutado_pct;;;;0;
+general;actualizado;00:00;;;;
+general;escrutado_pct;;;;0.0;
 general;participacion_pct;;;;;
+avance;14:00;;;;40.37;40.48
