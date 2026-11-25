@@ -18,8 +18,11 @@ const servidor = http.createServer((req, res) => {
 });
 const DIRECTO = [["arco", "vista=arco"], ["faldon", "vista=faldon&fondo=oscuro"], ["columna", "vista=columna&fondo=oscuro"],
   ["participacion", "vista=participacion"], ["provincia28", "vista=provincia&provincia=28"], ["provincia08", "vista=provincia&provincia=08"],
-  ["ticker", "vista=ticker&fondo=oscuro"]];
-const REDES = [["redes_historia", "formato=historia&limpio", 1080, 1920], ["redes_reel", "formato=reel&limpio", 1080, 1920],
+  ["ticker", "vista=ticker&fondo=oscuro"], ["blanco_arco", "vista=arco&fondo=blanco"], ["blanco_faldon", "vista=faldon&fondo=blanco"],
+  ["blanco_columna", "vista=columna&fondo=blanco"], ["blanco_participacion", "vista=participacion&fondo=blanco"],
+  ["blanco_provincia28", "vista=provincia&provincia=28&fondo=blanco"], ["blanco_ticker", "vista=ticker&fondo=blanco"]];
+const REDES = [["redes_post_mapa", "formato=post&tema=mapa&limpio", 1080, 1350], ["redes_post_pactometro", "formato=post&tema=pactometro&limpio", 1080, 1350],
+  ["redes_historia", "formato=historia&limpio", 1080, 1920], ["redes_reel", "formato=reel&limpio", 1080, 1920],
   ["redes_post", "formato=post&limpio", 1080, 1350], ["redes_historia_participacion", "formato=historia&tema=participacion&limpio", 1080, 1920],
   ["redes_post_madrid", "formato=post&tema=provincia&provincia=28&limpio", 1080, 1350], ["redes_reel_guias", "formato=reel&limpio&guias", 1080, 1920]];
 (async () => {
