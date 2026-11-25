@@ -1,15 +1,15 @@
 tipo;id;nombre;escanos;votos;porcentaje;escanos_2023
-general;actualizado;17:06;;;;
-general;escrutado_pct;;;;86.85;
-general;participacion_pct;;;;69.41;
+general;actualizado;17:09;;;;
+general;escrutado_pct;;;;93.98;
+general;participacion_pct;;;;69.76;
 avance;14:00;;;;40.37;40.48
 avance;18:00;;;;53.0;53.12
-partido;PP;PP;121;7178453;33.44;138
-partido;PSOE;PSOE;113;6929795;32.28;121
-partido;VOX;Vox;29;2718971;12.67;33
-partido;FA;Frente Amplio;25;2386664;11.12;
-partido;ERC;ERC;7;488148;2.27;7
-partido;JUNTS;Junts;6;415724;1.94;7
-partido;EH_BILDU;EH Bildu;4;218772;1.02;6
-partido;PNV;PNV;3;113010;0.53;5
-partido;BNG;BNG;1;152504;0.71;1
+partido;PP;PP;130;7858089;33.65;138
+partido;PSOE;PSOE;121;7553559;32.35;121
+partido;VOX;Vox;33;3044021;13.04;33
+partido;FA;Frente Amplio;25;2422203;10.37;
+partido;ERC;ERC;7;488148;2.09;7
+partido;JUNTS;Junts;6;415724;1.78;7
+partido;EH_BILDU;EH Bildu;4;218772;0.94;6
+partido;PNV;PNV;3;113010;0.48;5
+partido;BNG;BNG;1;152504;0.65;1
