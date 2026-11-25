@@ -356,28 +356,35 @@ function pactometro(F) {
   c.setLineDash([10, 7]); c.strokeStyle = "#fff"; c.lineWidth = 4; c.beginPath(); c.moveTo(xc, y - 22); c.lineTo(xc, y + alto + 22); c.stroke(); c.setLineDash([]);
   txt(`Mayoría absoluta: ${MAYORIA}`, xc, y + alto + 54, 24, 700, "#fff", "center");
   y += alto + 84;
-  // Composición de cada bloque
-  const mitad = (w - 24) / 2;
-  [[izq, sI, x0, "left"], [der, sD, x0 + mitad + 24, "left"]].forEach(([l, n, bx]) => {
-    caja(bx, y, mitad, 40 + 44 * Math.max(l.length, 1) + 12, 16, "rgba(255,255,255,.07)");
-    l.forEach((p, i) => {
-      const yy = y + 50 + i * 44;
-      caja(bx + 20, yy - 24, 24, 24, 6, col(p.f)); txt(nom(p), bx + 56, yy - 3, 27, 700, "#fff", "left", mitad - 150); txt(p.e, bx + mitad - 22, yy - 2, 30, 800, "#fff", "right");
+  // Debajo de la barra, TODOS los partidos con escaño, en tres grupos de fichas: los dos bloques y el resto.
+  const etiqueta = (p) => `${CORTO[p.f] ? nom(p) : p.s} ${p.e}`;
+  const cabeza = (l, def) => l.length ? (CORTO[l[0].f] ? nom(l[0]) : l[0].s) : def;
+  const grupos = [[`Bloque del ${cabeza(izq, "PSOE")}: ${sI} escaños`, izq], [`Bloque del ${cabeza(der, "PP")}: ${sD} escaños`, der],
+                  [`Fuera de los dos bloques: ${sM} escaños`, medio]];
+  const yTexto = yPie - 196;
+  const colocar = (tam) => {               // reparte las fichas en filas; devuelve la altura total que ocupan
+    c.font = `700 ${tam}px ${FUENTE}`;
+    let alto = 0;
+    const out = grupos.map(([titulo, l]) => {
+      let fx = x0, fila = 0;
+      const fichas = l.map((p) => { const an = c.measureText(etiqueta(p)).width + tam * 2.4; if (fx + an > x1 + 12) { fx = x0; fila++; } const r = [p, fx, fila, an]; fx += an; return r; });
+      const g = { titulo, fichas, y: alto, filas: l.length ? fila + 1 : 1 };
+      alto += tam * 1.5 + g.filas * tam * 2.1 + tam * .7;
+      return g;
     });
-    if (!l.length) txt("Sin escaños", bx + 20, y + 50, 26, 600, TENUE);
-  });
-  y += 40 + 44 * Math.max(izq.length, der.length, 1) + 12 + 44;
-  // Los que no están en ningún bloque
-  txt(`Fuera de los dos bloques: ${sM} escaños`, x0, y, 28, 800, ACENTO);
-  y += 18;
-  let cxm = x0, fila = 0;
-  medio.forEach((p) => {
-    c.font = `700 26px ${FUENTE}`;
-    const t = `${CORTO[p.f] ? nom(p) : p.s} ${p.e}`, an = c.measureText(t).width + 62;
-    if (cxm + an > x1) { cxm = x0; fila++; }
-    if (y + fila * 56 + 46 > yPie - 230) return;
-    caja(cxm, y + fila * 56, an - 12, 46, 23, "rgba(255,255,255,.09)"); caja(cxm + 14, y + fila * 56 + 12, 22, 22, 6, p.f === "OTROS" ? "#8D98A6" : col(p.f));
-    txt(t, cxm + 46, y + fila * 56 + 33, 26, 700); cxm += an;
+    return [out, alto];
+  };
+  let tam = 28, [puestos, altoTotal] = colocar(tam);
+  while (altoTotal > yTexto - 16 - y && tam > 18) [puestos, altoTotal] = colocar(--tam);
+  puestos.forEach((g, i) => {
+    const gy = y + g.y;
+    txt(g.titulo, x0, gy + tam, tam, 800, i === 2 ? TENUE : ACENTO);
+    if (!g.fichas.length) txt("Ninguno", x0, gy + tam * 1.5 + tam * 1.35, tam * .9, 600, TENUE);
+    g.fichas.forEach(([p, cx, fila, an]) => {
+      const fy = gy + tam * 1.5 + fila * tam * 2.1, h = tam * 1.75;
+      caja(cx, fy, an - 12, h, h / 2, "rgba(255,255,255,.09)"); caja(cx + tam * .5, fy + h / 2 - tam * .4, tam * .8, tam * .8, 6, p.f === "OTROS" ? "#8D98A6" : col(p.f));
+      txt(etiqueta(p), cx + tam * 1.65, fy + h / 2 + tam * .35, tam * .93, 700);
+    });
   });
   // Qué le falta a cada bloque (pura aritmética)
   const falta = (l, n) => {
