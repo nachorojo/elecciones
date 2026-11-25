@@ -237,7 +237,9 @@ function pintarDetalle() {
       if (esp) antes[esp] = (antes[esp] || 0) + p.e;
     });
   }
-  const comparables = new Set(Object.values(ESPACIO_2023));
+  // Mientras queden escaños sin asignar (provincias sin recuento) no se compara con 2023: la diferencia engañaría.
+  const completo = a.partidos.reduce((t, p) => t + p.e, 0) >= a.escanos_total;
+  const comparables = new Set(completo ? Object.values(ESPACIO_2023) : []);
   const filas = vivo ? [...a.partidos].sort((x, y) => y.e - x.e || y.v - x.v) : a.partidos;
   if (!filas.length) lista.appendChild(el("p", "nota", "Todavía no hay votos contados. " + (seleccion ? "" : "Mientras tanto, el anillo interior muestra el reparto de 2023.")));
   filas.slice(0, vivo ? 16 : 12).forEach((p) => {

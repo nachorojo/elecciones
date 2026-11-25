@@ -185,7 +185,7 @@
     <h1>Elecciones <b>generales</b></h1>
     <div class="escr"><span id="c-t">Escrutado</span><b id="c-n">—</b></div>
     <div class="filas" id="c-filas"></div>
-    <div class="pie"><div>Mayoría absoluta 176</div><span id="c-h"></span></div>
+    <div class="pie"><div id="c-pie">Mayoría absoluta 176</div><span id="c-h"></span></div>
   </div>
 </section>
 
@@ -273,10 +273,12 @@ function logo(p) {
 function delta(p, antes) {
   // Con `antes` (una provincia): los espacios con continuidad que no tuvieron escaño allí se comparan con 0.
   const base = antes ? (E2023[p.f] === undefined ? undefined : antes[p.f] || 0) : E2023[p.f];
-  if (base === undefined) return null;
+  // En el total nacional no se compara mientras queden escaños sin asignar (provincias sin recuento): «PSOE 52, −69» engañaría.
+  if (base === undefined || (!antes && !repartoCompleto())) return null;
   const d = p.e - base;
   return el("span", "delta " + (d > 0 ? "sube" : d < 0 ? "baja" : "igual"), d > 0 ? `+${d}` : d < 0 ? `−${-d}` : "=");
 }
+const repartoCompleto = () => D.nacional.partidos.reduce((t, p) => t + p.e, 0) >= D.nacional.escanos_total;
 const conEscano = (a) => [...a.partidos].sort((x, y) => y.e - x.e || y.v - x.v);
 
 let D = null, pagina = 0, firma = "";
@@ -311,6 +313,16 @@ function hemiciclo(a) {
       if (e >= 14) { const m = (a0 + a1) / 2, r = (r1 + r2) / 2; texto(500 - r * Math.cos(m), 510 - r * Math.sin(m) + 12, e, r2 - r1 > 100 ? 40 : 28, 800); }
       acum += e;
     });
+    // Escaños aún sin asignar (provincias sin recuento): el resto del arco, en gris, con su cifra.
+    if (lista.length && acum < 350) {
+      const a0 = Math.PI * acum / 350, p = document.createElementNS(NS, "path");
+      p.setAttribute("d", arco(r1, r2, a0, Math.PI)); p.setAttribute("fill", PISTA); svg.appendChild(p);
+      if (350 - acum >= 30) {
+        const m = (a0 + Math.PI) / 2, r = (r1 + r2) / 2;
+        texto(500 - r * Math.cos(m), 510 - r * Math.sin(m), 350 - acum, 34, 800, TENUE);
+        texto(500 - r * Math.cos(m), 510 - r * Math.sin(m) + 26, "sin asignar", 19, 600, TENUE);
+      }
+    }
   };
   anillo(conEscano(a).filter((p) => p.e > 0).map((p) => [p.f, p.e]), 330, 490, 1);
   anillo(ARCO2023, 205, 305, .8);
@@ -385,20 +397,23 @@ function pintarFaldon() {
       f.appendChild(c); pista.appendChild(f);
     });
   } else { pista.classList.remove("previa"); if (!lista.length) pista.appendChild(el("div", "ficha", "")); }
-  $("#f-pie").textContent = (D.simulacro ? "SIMULACRO · " : "") + (hay ? "Escaños · mayoría absoluta 176 · " + (paginas > 1 ? `${pagina % paginas + 1}/${paginas} · ` : "") : "") + "Fuente: Ministerio del Interior";
+  $("#f-pie").textContent = (D.simulacro ? "SIMULACRO · " : "") + (hay ? (repartoCompleto() ? "Escaños · mayoría absoluta 176 · " : `Escaños asignados: ${a.partidos.reduce((t, p) => t + p.e, 0)} de 350 · `) + (paginas > 1 ? `${pagina % paginas + 1}/${paginas} · ` : "") : "") + "Fuente: Ministerio del Interior";
 }
 function pintarColumna() {
   const a = D.nacional;
   const hay = a.escrutado > 0, av = a.avances || [];
   $("#c-t").textContent = (D.simulacro ? "Simulacro · " : "") + (hay ? "escrutado" : av[1] > 0 ? "participación 18:00" : av[0] > 0 ? "participación 14:00" : "escrutado");
   $("#c-n").textContent = hay ? dec(a.escrutado, 2) + " %" : av[1] > 0 ? dec(av[1], 2) + " %" : av[0] > 0 ? dec(av[0], 2) + " %" : "0,00 %";
-  $("#c-h").textContent = D.hora || "";
+  $("#c-h").textContent = hay ? D.hora || "" : "";        // antes del escrutinio Interior manda la fecha sin hora («00:00»)
   const cont = $("#c-filas");
   cont.replaceChildren();
+  const libres = a.escanos_total - a.partidos.reduce((t, p) => t + p.e, 0);
+  $("#c-pie").textContent = hay && libres > 0 ? `${libres} escaños sin asignar` : "Mayoría absoluta 176";
   conEscano(a).filter((p) => p.e > 0).slice(0, 15).forEach((p) => {
     const f = el("div", "fila"); f.style.background = col(p.f);
     const d = delta(p);
     const dd = el("div", "d"); if (d) { d.className = "delta"; dd.appendChild(d); } else dd.style.visibility = "hidden";
+    if (!repartoCompleto()) dd.style.display = "none";
     f.append(el("div", "n", nom(p)), el("div", "e", String(p.e)), dd);
     cont.appendChild(f);
   });
@@ -424,7 +439,7 @@ function pintarParticipacion() {
   cont.replaceChildren();
   [["Avance de las 14:00", av[0]], ["Avance de las 18:00", av[1]]].forEach(([t, v], k) => {
     const c = el("div", "av" + (v > 0 ? "" : " pendiente"));
-    const n = el("div", "n", v > 0 ? dec(v, 1) : "—"); if (v > 0) n.appendChild(el("small", null, " %"));
+    const n = el("div", "n", v > 0 ? dec(v, 1) : "– –"); if (v > 0) n.appendChild(el("small", null, " %"));
     const b = el("div", "b"); const i = el("i"); i.style.width = Math.min(100, v || 0) + "%"; b.appendChild(i);
     const cmp = el("div", "cmp"), antes = AV_PREVIOS[k];
     if (v > 0) {
@@ -468,7 +483,7 @@ function disputados(n, minimo) {
 function pintarTicker() {
   const n = Math.max(1, Number(Q.get("n")) || 5), minimo = Q.has("minimo") ? Number(Q.get("minimo")) : 50;
   const cinta = $("#t-cinta"), lista = disputados(n, minimo);
-  $("#t-h").textContent = (D.simulacro ? "SIMULACRO · " : "") + (D.hora ? "Datos de las " + D.hora : "Último escaño de cada provincia");
+  $("#t-h").textContent = (D.simulacro ? "SIMULACRO · " : "") + (D.hora && D.nacional.escrutado > 0 ? "Datos de las " + D.hora : "Último escaño de cada provincia");
   cinta.replaceChildren();
   if (!lista.length) { cinta.appendChild(el("div", "aviso", D.nacional.escrutado > 0 ? "Aún no hay provincias con recuento suficiente." : "El escrutinio empieza a las 20:00.")); cinta.style.display = "flex"; return; }
   cinta.style.display = "";
