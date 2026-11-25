@@ -211,11 +211,12 @@ def _es_simulacro(fichero: Path) -> bool:
         return False
 
 
-def publicar(fichero: Path, mensaje: str) -> str:
-    """git add + commit + push del fichero de la web y del resumen para pantallas. Devuelve el error, o cadena vacía."""
+def publicar(fichero: Path, mensaje: str, subir: bool = True) -> str:
+    """git add + commit (+ push si `subir`) del fichero de la web, el resumen para pantallas y la proyección.
+    Devuelve el error, o cadena vacía. Con `subir=False` el envío queda confirmado en local y sube con el siguiente push."""
     ficheros = [str(fichero)] + [str(f) for f in (fichero.with_name("pantallas_29n.json"), fichero.with_name("pantallas_29n.csv"),
                                                   fichero.with_name("proyeccion_29n.json")) if f.exists()]
-    for orden in (["git", "add", *ficheros], ["git", "commit", "-q", "-m", mensaje], ["git", "push", "-q"]):
+    for orden in (["git", "add", *ficheros], ["git", "commit", "-q", "-m", mensaje], ["git", "push", "-q"])[:3 if subir else 2]:
         r = subprocess.run(orden, cwd=C.REPO, capture_output=True, text=True)
         if r.returncode != 0 and "nothing to commit" not in (r.stdout + r.stderr):
             return f"{' '.join(orden[:2])}: {(r.stderr or r.stdout).strip()[:200]}"
@@ -241,6 +242,9 @@ def main() -> None:
     ap.add_argument("--simulacro", action="store_true", help="rotula la página como SIMULACRO")
     ap.add_argument("--una-vez", action="store_true")
     ap.add_argument("--publicar", action="store_true", help="git commit + push de web/data/vivo_29n.json en cada envío")
+    ap.add_argument("--cada", type=float, default=0, metavar="MIN",
+                    help="con --publicar: sube a GitHub como mucho una vez cada MIN minutos (cada subida es un despliegue "
+                         "de Netlify). Los envíos intermedios se confirman en local y suben juntos. Por defecto, todos.")
     ap.add_argument("--sin-proyeccion", action="store_true")
     ap.add_argument("--repetir", type=Path, help="carpeta de un envío ya guardado: lo reprocesa sin conectarse")
     ap.add_argument("--mesas", action="store_true", help="baja los ficheros por mesa de las 52 provincias y termina")
@@ -263,6 +267,7 @@ def main() -> None:
         if a.publicar:
             print("   " + (publicar(E.VIVO, "29N: página vacía") or "publicada vacía"))
     ultimo = ultimo_senado = None
+    subido, pendientes = 0.0, 0                      # hora de la última subida y envíos confirmados sin subir
     error_senado = ""
     rechazos = 0
     print(f"Capturando en {a.carpeta} cada {a.intervalo} s. Ctrl+C para parar.")
@@ -277,9 +282,15 @@ def main() -> None:
                     linea += f"  | proyección {r['proyeccion']} (±{r['margen']})"
                 print(linea + (f"  | {len(r['fallos'])} fallos: {r['fallos'][:2]}" if r["fallos"] else ""))
                 if a.publicar and "escrutado" in r and not r.get("antiguo"):
-                    error = publicar(E.VIVO, f"29N: envío {envio} ({r['escrutado']} % escrutado)")
+                    subir = time.time() - subido >= a.cada * 60
+                    error = publicar(E.VIVO, f"29N: envío {envio} ({r['escrutado']} % escrutado)", subir)
                     if error:
                         print("   no se pudo publicar ->", error)
+                    elif subir:
+                        subido, pendientes = time.time(), 0
+                    else:
+                        pendientes += 1
+                        print(f"   confirmado en local; sube con el siguiente (como mucho una subida cada {a.cada:g} min)")
                 ultimo = envio
             rechazos = 0
         except KeyboardInterrupt:
@@ -315,4 +326,6 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\nCaptura detenida.")
+        # Con --cada pueden quedar envíos confirmados sin subir: se suben al parar (si no hay nada, no hace nada).
+        r = subprocess.run(["git", "push", "-q"], cwd=C.REPO, capture_output=True, text=True)
+        print("\nCaptura detenida." + ("" if r.returncode == 0 else " OJO: no se pudo subir lo pendiente; lanza «git push»."))
