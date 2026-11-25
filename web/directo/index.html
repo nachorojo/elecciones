@@ -23,20 +23,29 @@
                          Antes del escrutinio solo alterna participación y faldón.
   Galería con miniaturas de todos: galeria.html
   Opciones:
-    fondo=transparente | oscuro | croma     (por defecto: transparente en faldon/columna, oscuro en el resto)
+    fondo=transparente | oscuro | blanco | croma   (por defecto: transparente en faldon/columna, oscuro en el resto;
+                                            blanco = versión clara: fondo blanco, paneles claros y texto oscuro)
     lado=derecha         columna a la derecha            paso=6     segundos por página del carrusel
     datos=simulacro | demo                  para ensayar sin recuento real (último envío del simulacro de Interior)
   Logos: si existe logos/<ID>.png (PP.png, PSOE.png, VOX.png, FA.png…), se muestra en lugar del bloque de color.
 -->
 <style>
   :root { --tinta: #0d1320; --panel: rgba(13, 19, 32, .94); --panel2: rgba(255, 255, 255, .07); --texto: #fff;
-          --tenue: rgba(255, 255, 255, .66); --acento: #19c37d; --sube: #3ddc84; --baja: #ff6b6b; }
+          --tenue: rgba(255, 255, 255, .66); --acento: #19c37d; --sube: #3ddc84; --baja: #ff6b6b;
+          --raya: rgba(255, 255, 255, .12); --pista: rgba(255, 255, 255, .12); --oro: #ffd166; }
   * { box-sizing: border-box; margin: 0; }
   html, body { width: 1920px; height: 1080px; overflow: hidden; background: transparent;
                font-family: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; color: var(--texto);
                font-variant-numeric: tabular-nums; }
   body.fondo-oscuro { background: radial-gradient(1200px 700px at 30% 20%, #1b2740, #0a0f1a 70%); }
   body.fondo-croma { background: #00b140; }
+  /* Versión clara (fondo=blanco): mismos gráficos con fondo blanco, paneles claros y texto oscuro. */
+  body.fondo-blanco { background: #fff; --tinta: #fff; --panel: #f3f5f8; --panel2: rgba(13, 19, 32, .06); --texto: #0d1320;
+                      --tenue: rgba(13, 19, 32, .62); --acento: #19c37d; --sube: #0a8a4a; --baja: #c62828;
+                      --raya: rgba(13, 19, 32, .12); --pista: rgba(13, 19, 32, .1); --oro: #a85f00; }
+  body.fondo-blanco #faldon .barra, body.fondo-blanco #columna .col, body.fondo-blanco #ticker .barra { box-shadow: 0 6px 24px rgba(13, 19, 32, .18); }
+  body.fondo-blanco #faldon .pie { color: var(--texto); text-shadow: none; }
+  body.fondo-blanco #participacion .av.pendiente .n { color: rgba(13, 19, 32, .22); }
   .vista { display: none; position: absolute; inset: 0; }
   body[data-vista="faldon"] #faldon, body[data-vista="columna"] #columna, body[data-vista="arco"] #arco,
   body[data-vista="participacion"] #participacion, body[data-vista="provincia"] #provincia,
@@ -52,12 +61,12 @@
   #ticker .rueda { display: inline-flex; height: 100%; align-items: center; white-space: nowrap; will-change: transform;
                    animation: corre 40s linear infinite; }
   #ticker .item { display: inline-flex; align-items: center; gap: 14px; padding: 0 46px; font-size: 30px; height: 100%;
-                  border-right: 1px solid rgba(255, 255, 255, .14); }
+                  border-right: 1px solid var(--raya); }
   #ticker .item .prov { font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
   #ticker .item .esc { font-size: 20px; color: var(--tenue); font-weight: 600; }
   #ticker .item i { width: 18px; height: 18px; border-radius: 5px; flex: none; }
   #ticker .item .t { color: var(--tenue); }
-  #ticker .item .votos { font-weight: 800; color: #ffd166; }
+  #ticker .item .votos { font-weight: 800; color: var(--oro); }
   #ticker .aviso { padding: 0 46px; font-size: 28px; color: var(--tenue); align-self: center; }
   @keyframes corre { from { transform: translateX(0); } to { transform: translateX(-50%); } }
   .sello { font-size: 20px; font-weight: 800; letter-spacing: .12em; padding: 6px 14px; border-radius: 6px;
@@ -77,7 +86,7 @@
   #faldon .cab .n { font-size: 58px; font-weight: 800; line-height: 1.05; letter-spacing: -.02em; }
   #faldon .cab .h { font-size: 18px; font-weight: 600; opacity: .8; }
   #faldon .pista { flex: 1; display: grid; grid-template-columns: repeat(5, 1fr); align-items: stretch; }
-  #faldon .ficha { display: flex; align-items: center; gap: 16px; padding: 0 20px; border-left: 1px solid rgba(255, 255, 255, .1);
+  #faldon .ficha { display: flex; align-items: center; gap: 16px; padding: 0 20px; border-left: 1px solid var(--raya);
                    animation: entra .5s ease both; min-width: 0; }
   #faldon .ficha .logo { width: 74px; height: 74px; font-size: 21px; }
   #faldon .ficha .nom { font-size: 21px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -103,7 +112,7 @@
   #columna .escr b { white-space: nowrap; margin-left: 10px; font-size: 40px; font-weight: 800; letter-spacing: -.02em; }
   #columna .filas { flex: 1; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
   #columna .fila { display: grid; grid-template-columns: 1fr 78px 62px; align-items: center; height: 50px; flex: none;
-                   border-radius: 9px; padding: 0 14px; font-size: 24px; font-weight: 700; }
+                   border-radius: 9px; padding: 0 14px; font-size: 24px; font-weight: 700; color: #fff; }
   #columna .fila .n { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0, 0, 0, .3); }
   #columna .fila .e { text-align: right; font-size: 30px; font-weight: 800; }
   #columna .fila .d { text-align: right; font-size: 19px; background: rgba(0, 0, 0, .28); border-radius: 6px;
@@ -149,7 +158,7 @@
   #participacion .av .h { font-size: 34px; font-weight: 700; color: var(--tenue); }
   #participacion .av .n { font-size: 190px; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
   #participacion .av .n small { font-size: 80px; }
-  #participacion .av .b { height: 22px; border-radius: 11px; background: rgba(255, 255, 255, .12); margin-top: 26px; overflow: hidden; }
+  #participacion .av .b { height: 22px; border-radius: 11px; background: var(--pista); margin-top: 26px; overflow: hidden; }
   #participacion .av .b i { display: block; height: 100%; background: var(--acento); border-radius: 11px; }
   #participacion .av .cmp { font-size: 34px; font-weight: 600; margin-top: 26px; min-height: 48px; }
   #participacion .av .ref { font-size: 26px; color: var(--tenue); margin-top: 8px; }
@@ -280,6 +289,8 @@ function hemiciclo(a) {
     const pt = (r, x) => `${500 - r * Math.cos(x)},${510 - r * Math.sin(x)}`;
     return `M${pt(r2, a0)}A${r2},${r2} 0 0 1 ${pt(r2, a1)}L${pt(r1, a1)}A${r1},${r1} 0 0 0 ${pt(r1, a0)}Z`;
   };
+  const css = getComputedStyle(document.body), T = (v) => css.getPropertyValue(v).trim();
+  const TEXTO = T("--texto") || "#fff", TENUE = T("--tenue") || "rgba(255,255,255,.66)", TINTA = T("--tinta") || "#0d1320", PISTA = T("--pista") || "rgba(255,255,255,.1)";
   const texto = (x, y, t, tam, peso, relleno) => {
     const n = document.createElementNS(NS, "text");
     n.setAttribute("x", x); n.setAttribute("y", y); n.setAttribute("text-anchor", "middle");
@@ -290,13 +301,13 @@ function hemiciclo(a) {
     let acum = 0;
     if (!lista.length) {
       const p = document.createElementNS(NS, "path");
-      p.setAttribute("d", arco(r1, r2, 0, Math.PI)); p.setAttribute("fill", "rgba(255,255,255,.1)"); svg.appendChild(p);
+      p.setAttribute("d", arco(r1, r2, 0, Math.PI)); p.setAttribute("fill", PISTA); svg.appendChild(p);
     }
     lista.forEach(([f, e]) => {
       const a0 = Math.PI * acum / 350, a1 = Math.PI * (acum + e) / 350;
       const p = document.createElementNS(NS, "path");
       p.setAttribute("d", arco(r1, r2, a0, a1)); p.setAttribute("fill", col(f)); p.setAttribute("opacity", opacidad);
-      p.setAttribute("stroke", "#0d1320"); p.setAttribute("stroke-width", "2"); svg.appendChild(p);
+      p.setAttribute("stroke", TINTA); p.setAttribute("stroke-width", "2"); svg.appendChild(p);
       if (e >= 14) { const m = (a0 + a1) / 2, r = (r1 + r2) / 2; texto(500 - r * Math.cos(m), 510 - r * Math.sin(m) + 12, e, r2 - r1 > 100 ? 40 : 28, 800); }
       acum += e;
     });
@@ -305,11 +316,11 @@ function hemiciclo(a) {
   anillo(ARCO2023, 205, 305, .8);
   const l = document.createElementNS(NS, "line");
   l.setAttribute("x1", 500); l.setAttribute("x2", 500); l.setAttribute("y1", 8); l.setAttribute("y2", 310);
-  l.setAttribute("stroke", "#fff"); l.setAttribute("stroke-width", 3); l.setAttribute("stroke-dasharray", "8 6"); svg.appendChild(l);
-  texto(500, 440, "Mayoría absoluta", 26, 600, "rgba(255,255,255,.66)");
-  texto(500, 500, "176", 60, 800);
-  texto(72, 536, "2026", 22, 700, "rgba(255,255,255,.66)");
-  texto(250, 536, "2023", 22, 700, "rgba(255,255,255,.66)");
+  l.setAttribute("stroke", TEXTO); l.setAttribute("stroke-width", 3); l.setAttribute("stroke-dasharray", "8 6"); svg.appendChild(l);
+  texto(500, 440, "Mayoría absoluta", 26, 600, TENUE);
+  texto(500, 500, "176", 60, 800, TEXTO);
+  texto(72, 536, "2026", 22, 700, TENUE);
+  texto(250, 536, "2023", 22, 700, TENUE);
   return svg;
 }
 

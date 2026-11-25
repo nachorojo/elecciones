@@ -14,7 +14,11 @@
     formato=reel       1080 × 1920 (9:16): Reels, TikTok y vídeo vertical. Texto entre y = 270 y 1250, y sin
                        acercarse a la columna de iconos de la derecha (150 px).
     formato=post       1080 × 1350 (4:5): publicación en el muro de Instagram, Facebook y X. Sin zonas tapadas.
-    tema=resultado | participacion | provincia&provincia=28      (resultado pasa solo a participación si aún no hay recuento)
+    tema=resultado | mapa | pactometro | participacion | provincia&provincia=28
+                       (resultado, mapa y pactómetro pasan solos a participación si aún no hay recuento)
+    Pactómetro: izq= y der= cambian los bloques (identificadores separados por comas: PSOE,FA,PODEMOS,ERC…). Por defecto,
+                       der=PP,VOX e izq=PSOE,FA,PODEMOS,ADELANTE,COMPROMIS,NC,ERC,EH_BILDU,BNG; lo demás queda «en medio».
+                       Es una suma aritmética de escaños: los bloques los decide Redacción.
     guias              pinta en rojo las zonas que tapa la interfaz de cada red (no salen en el PNG descargado)
     limpio             solo el lienzo, a tamaño real (para capturar con OBS como fuente «Navegador» de 1080 × 1920)
     datos=simulacro | demo
@@ -50,13 +54,15 @@
   <div class="mandos">
     <label>Formato
       <select id="formato">
+        <option value="post">Publicación · 1080 × 1350 (Instagram, Facebook, X)</option>
         <option value="historia">Historia · 1080 × 1920 (Instagram, Facebook)</option>
         <option value="reel">Reel / TikTok · 1080 × 1920 (zona central)</option>
-        <option value="post">Publicación · 1080 × 1350 (Instagram, Facebook, X)</option>
       </select></label>
     <label>Contenido
       <select id="tema">
         <option value="resultado">Resultado nacional</option>
+        <option value="mapa">Mapa de provincias</option>
+        <option value="pactometro">Pactómetro</option>
         <option value="participacion">Participación</option>
         <option value="provincia">Una provincia</option>
       </select></label>
@@ -74,6 +80,7 @@
   </div>
   <canvas id="lienzo" width="1080" height="1920"></canvas>
 </main>
+<script src="../data/provincias.js"></script>
 <script src="../menu.js" data-base="../"></script>
 <script>
 const Q = new URLSearchParams(location.search);
@@ -108,14 +115,18 @@ const dec = (x, d = 1) => Number(x).toLocaleString("es-ES", { minimumFractionDig
 const conEscano = (a) => [...a.partidos].sort((x, y) => y.e - x.e || y.v - x.v);
 const lienzo = $("#lienzo"), c = lienzo.getContext("2d");
 let D = null, firma = "";
-const E = { formato: Q.get("formato") || "historia", tema: Q.get("tema") || "resultado", prov: Q.get("provincia") || "28",
+const E = { formato: Q.get("formato") || "post", tema: Q.get("tema") || "resultado", prov: Q.get("provincia") || "28",
             datos: Q.get("datos") || "", guias: Q.has("guias") };
-if (!FORMATOS[E.formato]) E.formato = "historia";
+if (!FORMATOS[E.formato]) E.formato = "post";
+const lista = (k, def) => (Q.get(k) || def).split(",").map((x) => x.trim().toUpperCase()).filter(Boolean);
+const BLOQUE_IZQ = lista("izq", "PSOE,FA,PODEMOS,ADELANTE,COMPROMIS,NC,ERC,EH_BILDU,BNG"), BLOQUE_DER = lista("der", "PP,VOX");
 
 /* ---------- utilidades de dibujo ---------- */
 function txt(t, x, y, tam, peso = 700, color = "#fff", alin = "left", ancho = 0) {
   c.font = `${peso} ${tam}px ${FUENTE}`; c.fillStyle = color; c.textAlign = alin; c.textBaseline = "alphabetic";
   let s = String(t);
+  // Si no cabe, primero se encoge la letra (hasta el 65 %) y solo después se corta con puntos suspensivos.
+  for (let k = 0.95; ancho && c.measureText(s).width > ancho && k >= 0.65; k -= 0.05) c.font = `${peso} ${tam * k}px ${FUENTE}`;
   if (ancho && c.measureText(s).width > ancho) { while (s.length > 1 && c.measureText(s + "…").width > ancho) s = s.slice(0, -1); s += "…"; }
   c.fillText(s, x, y);
   return c.measureText(s).width;
@@ -262,13 +273,141 @@ function provincia(F) {
   filas(F, a, y, yFin, E2023_PROV[E.prov] || {});
 }
 
+// Mapa: cada provincia, del color de la candidatura más votada; debajo, faldón con los principales partidos.
+function mapa(F) {
+  const a = D.nacional, [x0, , x1] = F.z, w = x1 - x0, M = window.MAPA_PROV;
+  let y = cabecera(F, "El más votado por provincia", dec(a.escrutado, 1) + " %", "escrutado");
+  const yPie = pie(F), altoFaldon = 286, yFaldon = yPie - altoFaldon;
+  const gana = {}, cuenta = {};
+  Object.entries(D.provincias).forEach(([cod, p]) => {
+    const g = p.escrutado > 0 ? [...p.partidos].sort((m, n) => n.v - m.v)[0] : null;
+    if (g && g.v > 0) { gana[cod] = g; const k = g.f === "OTROS" ? g.s : g.f; (cuenta[k] = cuenta[k] || { p: g, n: 0 }).n++; }
+  });
+  if (M) {
+    const hueco = yFaldon - y - 64, k = Math.min(w / M.ancho, hueco / M.alto), dx = x0 + (w - M.ancho * k) / 2, dy = y + (hueco - M.alto * k) / 2;
+    c.save(); c.translate(dx, dy); c.scale(k, k);
+    c.lineWidth = 1.2 / k; c.strokeStyle = "rgba(255,255,255,.35)"; c.strokeRect(...M.canarias);
+    c.strokeStyle = TINTA; c.lineWidth = 1.6 / k; c.lineJoin = "round";
+    Object.entries(M.p).forEach(([cod, d]) => {
+      if (M.puntos[cod]) return;
+      const forma = new Path2D(d);
+      c.fillStyle = gana[cod] ? col(gana[cod].f) : "rgba(255,255,255,.14)"; c.fill(forma); c.stroke(forma);
+    });
+    Object.entries(M.puntos).forEach(([cod, [px, py]]) => {
+      c.beginPath(); c.arc(px, py, 6, 0, 2 * Math.PI); c.fillStyle = gana[cod] ? col(gana[cod].f) : "rgba(255,255,255,.14)"; c.fill(); c.stroke();
+    });
+    c.restore();
+  }
+  // Leyenda: cuántas provincias gana cada candidatura (Ceuta y Melilla cuentan como circunscripciones).
+  let x = x0;
+  txt("Circunscripciones:", x, yFaldon - 22, 22, 600, TENUE); x += 208;
+  Object.values(cuenta).sort((m, n) => n.n - m.n).forEach(({ p, n }) => {
+    c.font = `700 23px ${FUENTE}`;
+    const t = `${CORTO[p.f] || nom(p)} ${n}`, an = c.measureText(t).width;
+    if (x + an + 44 > x1) return;
+    caja(x, yFaldon - 42, 22, 22, 5, col(p.f)); txt(t, x + 30, yFaldon - 22, 23, 700); x += an + 52;
+  });
+  // Faldón: hasta seis casillas; si hay más partidos, la última es «Otros».
+  let lista = conEscano(a).filter((p) => p.e > 0 || p.v >= 0.03 * a.validos);
+  if (lista.length > 6) {
+    const cola = lista.slice(5);
+    lista = lista.slice(0, 5).concat({ otros: cola.length, e: cola.reduce((t, p) => t + p.e, 0), v: cola.reduce((t, p) => t + p.v, 0) });
+  }
+  const cw = (w - 2 * 14) / 3, ch = (altoFaldon - 14 - 12) / 2;
+  lista.forEach((p, i) => {
+    const cx = x0 + (i % 3) * (cw + 14), cy = yFaldon + Math.floor(i / 3) * (ch + 14), color = p.otros ? "#8D98A6" : col(p.f);
+    caja(cx, cy, cw, ch, 14, "rgba(255,255,255,.07)"); caja(cx, cy, 12, ch, 6, color);
+    txt(p.otros ? `Otros (${p.otros})` : nom(p), cx + 28, cy + 44, 30, 800, "#fff", "left", cw - 150);
+    txt(p.e, cx + cw - 18, cy + 56, 58, 800, "#fff", "right");
+    txt(num(p.v) + " votos", cx + 28, cy + 82, 22, 600, TENUE);
+    txt(dec(100 * p.v / a.validos, 1) + " %", cx + 28, cy + 114, 26, 700);
+    txt("escaños", cx + cw - 18, cy + 84, 18, 600, TENUE, "right");
+  });
+}
+// Pactómetro: un bloque crece desde cada extremo de una barra de 350 escaños; quien cruza el centro tiene mayoría absoluta.
+function pactometro(F) {
+  const a = D.nacional, [x0, , x1] = F.z, w = x1 - x0, MAYORIA = Math.floor(a.escanos_total / 2) + 1;
+  let y = cabecera(F, "Pactómetro", dec(a.escrutado, 1) + " %", "escrutado");
+  const yPie = pie(F);
+  const con = conEscano(a).filter((p) => p.e > 0);
+  const izq = con.filter((p) => BLOQUE_IZQ.includes(p.f)), der = con.filter((p) => BLOQUE_DER.includes(p.f));
+  const medio = con.filter((p) => !BLOQUE_IZQ.includes(p.f) && !BLOQUE_DER.includes(p.f));
+  const suma = (l) => l.reduce((t, p) => t + p.e, 0), sI = suma(izq), sD = suma(der), sM = suma(medio);
+  const lema = (l) => l.map((p) => CORTO[p.f] ? nom(p) : p.s).join(" + ") || "—";
+  const estado = (n) => n >= MAYORIA ? `Mayoría absoluta (+${n - MAYORIA})` : `A ${MAYORIA - n} de la mayoría absoluta`;
+  // Totales de cada bloque
+  txt(sI, x0, y + 96, 120, 800); txt(sD, x1, y + 96, 120, 800, "#fff", "right");
+  txt(estado(sI), x0, y + 140, 28, 700, sI >= MAYORIA ? SUBE : TENUE); txt(estado(sD), x1, y + 140, 28, 700, sD >= MAYORIA ? SUBE : TENUE, "right");
+  y += 176;
+  // Barra de 350
+  const alto = 120, px = w / a.escanos_total;
+  caja(x0, y, w, alto, 14, "rgba(255,255,255,.08)");
+  c.save(); c.beginPath(); c.roundRect(x0, y, w, alto, 14); c.clip();
+  const tramo = (x, p, alfa) => {
+    c.globalAlpha = alfa; c.fillStyle = p.f === "OTROS" ? "#8D98A6" : col(p.f); c.fillRect(x, y, p.e * px, alto); c.globalAlpha = 1;
+    c.strokeStyle = TINTA; c.lineWidth = 3; c.strokeRect(x, y - 2, p.e * px, alto + 4);
+    if (p.e >= 12) txt(p.e, x + p.e * px / 2, y + alto / 2 + 14, 40, 800, "#fff", "center");
+  };
+  let x = x0; izq.forEach((p) => { tramo(x, p, 1); x += p.e * px; });
+  const xm = x; let xr = x1; der.forEach((p) => { xr -= p.e * px; tramo(xr, p, 1); });
+  let xq = xm + (xr - xm - sM * px) / 2; medio.forEach((p) => { tramo(xq, p, .5); xq += p.e * px; });
+  c.restore();
+  const xc = x0 + w / 2;
+  c.setLineDash([10, 7]); c.strokeStyle = "#fff"; c.lineWidth = 4; c.beginPath(); c.moveTo(xc, y - 22); c.lineTo(xc, y + alto + 22); c.stroke(); c.setLineDash([]);
+  txt(`Mayoría absoluta: ${MAYORIA}`, xc, y + alto + 54, 24, 700, "#fff", "center");
+  y += alto + 84;
+  // Debajo de la barra, TODOS los partidos con escaño, en tres grupos de fichas: los dos bloques y el resto.
+  const etiqueta = (p) => `${CORTO[p.f] ? nom(p) : p.s} ${p.e}`;
+  const cabeza = (l, def) => l.length ? (CORTO[l[0].f] ? nom(l[0]) : l[0].s) : def;
+  const grupos = [[`Bloque del ${cabeza(izq, "PSOE")}: ${sI} escaños`, izq], [`Bloque del ${cabeza(der, "PP")}: ${sD} escaños`, der],
+                  [`Fuera de los dos bloques: ${sM} escaños`, medio]];
+  const yTexto = yPie - 196;
+  const colocar = (tam) => {               // reparte las fichas en filas; devuelve la altura total que ocupan
+    c.font = `700 ${tam}px ${FUENTE}`;
+    let alto = 0;
+    const out = grupos.map(([titulo, l]) => {
+      let fx = x0, fila = 0;
+      const fichas = l.map((p) => { const an = c.measureText(etiqueta(p)).width + tam * 2.4; if (fx + an > x1 + 12) { fx = x0; fila++; } const r = [p, fx, fila, an]; fx += an; return r; });
+      const g = { titulo, fichas, y: alto, filas: l.length ? fila + 1 : 1 };
+      alto += tam * 1.5 + g.filas * tam * 2.1 + tam * .7;
+      return g;
+    });
+    return [out, alto];
+  };
+  let tam = 28, [puestos, altoTotal] = colocar(tam);
+  while (altoTotal > yTexto - 16 - y && tam > 18) [puestos, altoTotal] = colocar(--tam);
+  puestos.forEach((g, i) => {
+    const gy = y + g.y;
+    txt(g.titulo, x0, gy + tam, tam, 800, i === 2 ? TENUE : ACENTO);
+    if (!g.fichas.length) txt("Ninguno", x0, gy + tam * 1.5 + tam * 1.35, tam * .9, 600, TENUE);
+    g.fichas.forEach(([p, cx, fila, an]) => {
+      const fy = gy + tam * 1.5 + fila * tam * 2.1, h = tam * 1.75;
+      caja(cx, fy, an - 12, h, h / 2, "rgba(255,255,255,.09)"); caja(cx + tam * .5, fy + h / 2 - tam * .4, tam * .8, tam * .8, 6, p.f === "OTROS" ? "#8D98A6" : col(p.f));
+      txt(etiqueta(p), cx + tam * 1.65, fy + h / 2 + tam * .35, tam * .93, 700);
+    });
+  });
+  // Qué le falta a cada bloque (pura aritmética)
+  const falta = (l, n) => {
+    const quien = lema(l.slice(0, 2)) + (l.length > 2 ? " y aliados" : "");
+    if (n >= MAYORIA) return `${quien}: ${n} escaños, mayoría absoluta.`;
+    const f = MAYORIA - n, uno = medio.filter((p) => p.e >= f).map((p) => CORTO[p.f] ? nom(p) : p.s);
+    if (uno.length) return `${quien}: le faltan ${f}. Le bastaría sumar a ${uno.slice(0, 3).join(" o ")}.`;
+    return n + sM >= MAYORIA ? `${quien}: le faltan ${f}. Necesitaría a más de un partido de fuera del bloque.`
+                             : `${quien}: le faltan ${f}. No llega ni con todos los de fuera del bloque.`;
+  };
+  let yy = yPie - 196;
+  [falta(izq, sI), falta(der, sD)].forEach((t) => { yy += parrafo(t, x0, yy, w, 25, 600, "#fff", 32) + 6; });
+  txt("Suma aritmética de escaños; no refleja pactos anunciados.", x1, yPie - 6 - 34, 20, 600, TENUE, "right");
+}
+
 function pintar(conGuias) {
   if (!D) return;
   const F = FORMATOS[E.formato];
   if (lienzo.width !== F.w || lienzo.height !== F.h) { lienzo.width = F.w; lienzo.height = F.h; }
   fondo(F);
   const hay = D.nacional.escrutado > 0;
-  (E.tema === "participacion" || (E.tema === "resultado" && !hay) ? participacion : E.tema === "provincia" ? provincia : resultado)(F);
+  const PIEZAS = { resultado, mapa, pactometro, provincia, participacion };
+  (E.tema === "participacion" || (!hay && E.tema !== "provincia") ? participacion : PIEZAS[E.tema] || resultado)(F);
   if (conGuias) { c.fillStyle = "rgba(255,40,40,.32)"; F.tapa.forEach(([x, y, w, h]) => c.fillRect(x, y, w, h)); }
 }
 function sincronizar() {

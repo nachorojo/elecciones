@@ -39,6 +39,12 @@
         <option value="simulacro">Ensayo: último envío del simulacro (datos ficticios)</option>
       </select>
     </label>
+    <label>Fondo
+      <select id="fondo">
+        <option value="">Oscuro</option>
+        <option value="blanco">Blanco</option>
+      </select>
+    </label>
     <a class="boton principal" id="bucle" target="_blank" rel="noopener">▶ Bucle a pantalla completa</a>
     <a class="boton" href="redes.html">Piezas verticales para redes</a>
   </div>
@@ -47,7 +53,7 @@
     usa el ensayo para ver cómo quedan.</p>
   <div class="galeria" id="galeria"></div>
   <section class="aviso" style="margin-top:22px"><strong>Opciones de la dirección.</strong>
-    <code>fondo=transparente|oscuro|croma</code> · <code>lado=derecha</code> (columna) · <code>paso=6</code> (segundos del carrusel del faldón) ·
+    <code>fondo=transparente|oscuro|blanco|croma</code> · <code>lado=derecha</code> (columna) · <code>paso=6</code> (segundos del carrusel del faldón) ·
     <code>provincia=28</code> (código de provincia) · en el ticker, <code>n=5</code> (provincias), <code>minimo=50</code> (% escrutado para entrar) y <code>velocidad=140</code> · en el bucle, <code>cada=12</code> (segundos por gráfico),
     <code>vistas=arco,participacion,…</code> y <code>provincias=28,08,46,…</code>. La participación se compara con julio de 2023 y
     noviembre de 2019 (Ministerio del Interior).</section>
@@ -68,15 +74,16 @@ sel.value = new URLSearchParams(location.search).get("datos") === "simulacro" ? 
 const base = new URL("index.html", location.href).href.replace(/index\.html$/, "");
 function escalar() { document.querySelectorAll(".mini a.marco").forEach((m) => { m.firstChild.style.transform = `scale(${m.clientWidth / 1920})`; }); }
 function pintar() {
-  const d = sel.value ? "&datos=" + sel.value : "";
+  const blanco = document.querySelector("#fondo").value === "blanco";
+  const d = (sel.value ? "&datos=" + sel.value : "") + (blanco ? "&fondo=blanco" : "");
   document.querySelector("#bucle").href = `${base}?vista=bucle${d}`;
   gal.replaceChildren();
   VISTAS.forEach(([v, titulo, texto, extra]) => {
     const superpuesta = v === "faldon" || v === "columna" || v === "ticker";
     const real = `${base}?vista=${v}${extra}${d}`;
     const caja = document.createElement("div"); caja.className = "mini";
-    const marco = Object.assign(document.createElement("a"), { className: "marco", href: real + (superpuesta ? "&fondo=oscuro" : ""), target: "_blank", rel: "noopener" });
-    marco.appendChild(Object.assign(document.createElement("iframe"), { src: real + (superpuesta ? "&fondo=oscuro" : ""), title: titulo, loading: "lazy", tabIndex: -1 }));
+    const marco = Object.assign(document.createElement("a"), { className: "marco", href: real + (superpuesta && !blanco ? "&fondo=oscuro" : ""), target: "_blank", rel: "noopener" });
+    marco.appendChild(Object.assign(document.createElement("iframe"), { src: real + (superpuesta && !blanco ? "&fondo=oscuro" : ""), title: titulo, loading: "lazy", tabIndex: -1 }));
     const txt = document.createElement("div"); txt.className = "txt";
     const url = document.createElement("div"); url.className = "url";
     const campo = Object.assign(document.createElement("input"), { value: real, readOnly: true });
@@ -91,6 +98,7 @@ function pintar() {
   escalar();
 }
 sel.addEventListener("change", pintar);
+document.querySelector("#fondo").addEventListener("change", pintar);
 addEventListener("resize", escalar);
 pintar();
 </script>
