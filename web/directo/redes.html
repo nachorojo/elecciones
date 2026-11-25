@@ -163,7 +163,7 @@ function cabecera(F, titulo, dato, rotulo) {
 function pie(F) {
   const [x0, , x1, y1] = F.z;
   txt("Fuente: Ministerio del Interior" + (D.nacional.escrutado > 0 ? " · recuento provisional" : ""), x0, y1 - 6, 22, 600, TENUE);
-  if (D.hora) txt(D.hora, x1, y1 - 6, 22, 700, TENUE, "right");
+  if (D.hora && D.nacional.escrutado > 0) txt(D.hora, x1, y1 - 6, 22, 700, TENUE, "right");
   return y1 - 44;
 }
 function arco(cx, cy, r1, r2, lista, opacidad, tam) {
@@ -177,6 +177,16 @@ function arco(cx, cy, r1, r2, lista, opacidad, tam) {
     if (f && e >= 14) { const m = (a0 + a1) / 2, r = (r1 + r2) / 2; txt(e, cx + r * Math.cos(m), cy + r * Math.sin(m) + tam * .35, tam, 800, "#fff", "center"); }
     acum += e;
   });
+  if (lista[0][0] && acum < 350) {        // escaños aún sin asignar (provincias sin recuento)
+    const a0 = Math.PI + Math.PI * acum / 350;
+    c.beginPath(); c.arc(cx, cy, r2, a0, 2 * Math.PI); c.arc(cx, cy, r1, 2 * Math.PI, a0, true); c.closePath();
+    c.fillStyle = "rgba(255,255,255,.1)"; c.fill();
+    if (350 - acum >= 30) {
+      const m = (a0 + 2 * Math.PI) / 2, r = (r1 + r2) / 2;
+      txt(350 - acum, cx + r * Math.cos(m), cy + r * Math.sin(m), tam, 800, TENUE, "center");
+      txt("sin asignar", cx + r * Math.cos(m), cy + r * Math.sin(m) + tam * .7, tam * .55, 600, TENUE, "center");
+    }
+  }
 }
 // Filas de partidos entre y0 e y1. Si no caben todos los que tienen escaño, la última fila resume el resto.
 function filas(F, a, y0, y1, antes) {
@@ -188,6 +198,7 @@ function filas(F, a, y0, y1, antes) {
   if (lista.length > caben) { const cola = lista.slice(caben - 1); resto = { n: cola.length, e: cola.reduce((s, p) => s + p.e, 0) }; lista = lista.slice(0, caben - 1); }
   const n = lista.length + (resto ? 1 : 0), alto = Math.min(96, (y1 - y0) / n), h = alto - 10, k = Math.min(1, h / 70);
   const max = Math.max(...lista.map((p) => p.v));
+  const completo = D.nacional.partidos.reduce((t, p) => t + p.e, 0) >= D.nacional.escanos_total;
   lista.forEach((p, i) => {
     const y = y0 + i * alto, base = y + h / 2;
     caja(x0, y, w, h, 14, "rgba(255,255,255,.07)");
@@ -195,7 +206,8 @@ function filas(F, a, y0, y1, antes) {
     caja(x0, y, 14, h, 7, col(p.f));
     txt(nom(p), x0 + 34, base + 13 * k, 36 * k, 800, "#fff", "left", w - 430);
     txt(dec(100 * p.v / a.validos, 1) + " %", x1 - 250, base + 11 * k, 30 * k, 600, TENUE, "right");
-    const b = antes ? (E2023[p.f] === undefined ? undefined : antes[p.f] || 0) : E2023[p.f];
+    // En el total nacional no se compara con 2023 mientras queden escaños sin asignar.
+    const b = antes ? (E2023[p.f] === undefined ? undefined : antes[p.f] || 0) : completo ? E2023[p.f] : undefined;
     txt(p.e, x1 - (b === undefined ? 24 : 96), base + 20 * k, 56 * k, 800, "#fff", "right");
     if (b !== undefined) variacion(p.e - b, x1 - 20, base + 12 * k, 28 * k);
   });
@@ -219,7 +231,8 @@ function resultado(F) {
   txt("176", cx, cy - 4, R * .13, 800, "#fff", "center");
   c.setLineDash([8, 6]); c.strokeStyle = "#fff"; c.lineWidth = 3; c.beginPath(); c.moveTo(cx, cy - R - 4); c.lineTo(cx, cy - R * .64); c.stroke(); c.setLineDash([]);
   txt("Fuera, 2026 · dentro, 2023", cx, cy + 34, 22, 600, TENUE, "center");
-  txt("escaños y variación frente a 2023", x1, cy + 34 + 38, 20, 600, TENUE, "right");
+  const asignados = a.partidos.reduce((t, p) => t + p.e, 0);
+  txt(asignados >= a.escanos_total ? "escaños y variación frente a 2023" : `escaños asignados hasta ahora: ${asignados} de ${a.escanos_total}`, x1, cy + 34 + 38, 20, 600, TENUE, "right");
   filas(F, a, cy + 84, yPie, null);
 }
 function participacion(F) {
@@ -334,7 +347,8 @@ function pactometro(F) {
   const medio = con.filter((p) => !BLOQUE_IZQ.includes(p.f) && !BLOQUE_DER.includes(p.f));
   const suma = (l) => l.reduce((t, p) => t + p.e, 0), sI = suma(izq), sD = suma(der), sM = suma(medio);
   const lema = (l) => l.map((p) => CORTO[p.f] ? nom(p) : p.s).join(" + ") || "—";
-  const estado = (n) => n >= MAYORIA ? `Mayoría absoluta (+${n - MAYORIA})` : `A ${MAYORIA - n} de la mayoría absoluta`;
+  const pendientes = a.escanos_total - sI - sD - sM;
+  const estado = (n) => pendientes > 0 ? "de momento" : n >= MAYORIA ? `Mayoría absoluta (+${n - MAYORIA})` : `A ${MAYORIA - n} de la mayoría absoluta`;
   // Totales de cada bloque
   txt(sI, x0, y + 96, 120, 800); txt(sD, x1, y + 96, 120, 800, "#fff", "right");
   txt(estado(sI), x0, y + 140, 28, 700, sI >= MAYORIA ? SUBE : TENUE); txt(estado(sD), x1, y + 140, 28, 700, sD >= MAYORIA ? SUBE : TENUE, "right");
@@ -355,6 +369,8 @@ function pactometro(F) {
   const xc = x0 + w / 2;
   c.setLineDash([10, 7]); c.strokeStyle = "#fff"; c.lineWidth = 4; c.beginPath(); c.moveTo(xc, y - 22); c.lineTo(xc, y + alto + 22); c.stroke(); c.setLineDash([]);
   txt(`Mayoría absoluta: ${MAYORIA}`, xc, y + alto + 54, 24, 700, "#fff", "center");
+  const libres = a.escanos_total - sI - sD - sM;
+  if (libres > 0) txt(`${libres} escaños aún sin asignar`, x1, y + alto + 54, 22, 600, TENUE, "right");
   y += alto + 84;
   // Debajo de la barra, TODOS los partidos con escaño, en tres grupos de fichas: los dos bloques y el resto.
   const etiqueta = (p) => `${CORTO[p.f] ? nom(p) : p.s} ${p.e}`;
@@ -396,7 +412,8 @@ function pactometro(F) {
                              : `${quien}: le faltan ${f}. No llega ni con todos los de fuera del bloque.`;
   };
   let yy = yPie - 196;
-  [falta(izq, sI), falta(der, sD)].forEach((t) => { yy += parrafo(t, x0, yy, w, 25, 600, "#fff", 32) + 6; });
+  (pendientes > 0 ? [`Quedan ${pendientes} escaños por asignar, en provincias que aún no tienen recuento. Las sumas de cada bloque no son definitivas.`]
+                  : [falta(izq, sI), falta(der, sD)]).forEach((t) => { yy += parrafo(t, x0, yy, w, 25, 600, "#fff", 32) + 6; });
   txt("Suma aritmética de escaños; no refleja pactos anunciados.", x1, yPie - 6 - 34, 20, 600, TENUE, "right");
 }
 

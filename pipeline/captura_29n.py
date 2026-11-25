@@ -247,6 +247,9 @@ def main() -> None:
     ap.add_argument("--cada", type=float, default=0, metavar="MIN",
                     help="con --publicar: sube a GitHub como mucho una vez cada MIN minutos (cada subida es un despliegue "
                          "de Netlify). Los envíos intermedios se confirman en local y suben juntos. Por defecto, todos.")
+    ap.add_argument("--cada-previa", type=float, default=None, metavar="MIN",
+                    help="como --cada, pero solo mientras no haya recuento (constitución de mesas y avances, que cambian "
+                         "poco). Con recuento manda --cada. Por defecto, igual que --cada.")
     ap.add_argument("--aceptar-antiguos", action="store_true",
                     help="publica también recuentos con fecha de totalización de hace más de un día (por defecto se "
                          "descartan como restos de una prueba anterior)")
@@ -288,7 +291,8 @@ def main() -> None:
                     linea += f"  | proyección {r['proyeccion']} (±{r['margen']})"
                 print(linea + (f"  | {len(r['fallos'])} fallos: {r['fallos'][:2]}" if r["fallos"] else ""))
                 if a.publicar and "escrutado" in r and not r.get("antiguo"):
-                    subir = time.time() - subido >= a.cada * 60
+                    cada = a.cada_previa if a.cada_previa is not None and not r["escrutado"] else a.cada
+                    subir = time.time() - subido >= cada * 60
                     error = publicar(E.VIVO, f"29N: envío {envio} ({r['escrutado']} % escrutado)", subir)
                     if error:
                         print("   no se pudo publicar ->", error)
@@ -296,7 +300,7 @@ def main() -> None:
                         subido, pendientes = time.time(), 0
                     else:
                         pendientes += 1
-                        print(f"   confirmado en local; sube con el siguiente (como mucho una subida cada {a.cada:g} min)")
+                        print(f"   confirmado en local; sube con el siguiente (como mucho una subida cada {cada:g} min)")
                 ultimo = envio
             rechazos = 0
         except KeyboardInterrupt:

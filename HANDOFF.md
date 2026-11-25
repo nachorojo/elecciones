@@ -61,7 +61,9 @@ hasta pasada la medianoche, y alguien que mire la ventana de vez en cuando. Un s
 8. `git push --dry-run` → no debe pedir usuario ni contraseña.
 
 ### A las 13:45: lanzar la captura (SIN `--simulacro`)
-9. `python -m pipeline.captura_29n --publicar`
+9. `python -m pipeline.captura_29n --publicar --cada-previa 10`
+   (`--cada-previa 10`: hasta las 20:00 sube a la web como mucho cada diez minutos, para no gastar despliegues de Netlify;
+   con recuento, sube cada envío)
    Escribe una línea por cada envío nuevo. Hasta las 20:00 la página muestra mesas constituidas y los avances de participación
    (14:00 y 18:00); desde las 20:00, el escrutinio. La proyección sale en esa línea y se guarda en la carpeta de cada envío: no se publica.
 10. No cerrar la ventana. No abrir `registro.csv` con Excel mientras esté en marcha (lo bloquea): usar el Bloc de notas o una copia.
