@@ -3,6 +3,30 @@
 Escrito el 2026-10-23 para retomar el trabajo desde otro PC **solo con GitHub** y sin acceso a la conversación
 original. Léelo entero antes de tocar nada; después lee `CLAUDE.md` (hallazgos y decisiones, más largo).
 
+## 0b. Domingo 29N: horario (escrito el 2026-11-27)
+Un solo PC capturando, el del trabajo (el probado el 18-N y el 25-N). Los pasos numerados son los del apartado 0.
+Horas de Interior según el manual: avances a las 14:00 y a las 18:00, escrutinio desde las 20:00, publicación de resultados a las 21:00.
+**No sabemos** a qué hora empieza Interior a servir la constitución de mesas ni si la API da recuento entre las 20:00 y las 21:00.
+
+| Hora | Interior | Nacho |
+|---|---|---|
+| Viernes 27 o sábado 28 | — | Víspera en el PC del trabajo: pasos 1–5 (`git pull`, tests, página vacía, quitar la suspensión). Mirar el saldo de Netlify. |
+| 9:00 | Abren los colegios | — |
+| 13:00 | — | En el trabajo. Pasos 6–8 (variables, `curl` → 200, `git push --dry-run`). |
+| 13:45 | — | Paso 9: `python -m pipeline.captura_29n --publicar --cada-previa 10` (SIN `--simulacro`). |
+| 14:00 | Primer avance de participación | Comprobar `directo/?vista=participacion` y la pieza de redes de participación. |
+| 18:00 | Segundo avance | Lo mismo. Última ocasión cómoda para arreglar algo antes del recuento. |
+| 19:30 | — | Revisar ventana, galería de OBS y `redes.html`; saldo de Netlify. |
+| 20:00 | Cierre de colegios (península); empieza el escrutinio | Mirar si llega recuento (quizá no hasta las 21:00). |
+| 21:00 | Cierre en Canarias; publicación de resultados | Recuento en la web, gráficos y redes con cada envío (~3 min). Hasta que estén los 350 escaños asignados no hay comparación con 2023 ni conclusiones en el pactómetro. |
+| 21:00–00:30 | Envíos continuos; el Senado va detrás | Vigilar la ventana («no se pudo publicar», 401/403). Descargar los PNG de redes cuando se necesiten. |
+| Recuento parado cerca del 100 % | Fin del recuento provisional | Ctrl+C y `python -m pipeline.captura_29n --mesas` (si aún no existen los ficheros, repetir más tarde o el lunes). |
+
+Si se llega más tarde: lanzando a las 17:30 se pierde solo enseñar el avance de las 14:00 entre las 14:00 y las 18:00 (el envío de las
+18:00 trae los dos avances). No lanzar más tarde de las 17:30: quedaría sin margen para un 401, un fallo de `git push` o de Netlify.
+Arrancar en casa y seguir en el trabajo solo si el PC de casa pasa el sábado los pasos 1–3 y 6–8 con un clon propio FUERA de OneDrive;
+parar en casa con Ctrl+C, esperar al último «publicado», y en el trabajo hacer `git pull` antes del paso 9. Nunca dos capturas a la vez.
+
 ## 0a. Prueba de medios del miércoles 25 de noviembre (escrita el 2026-11-24)
 Horario de Interior: 15:00 constitución, 15:30 primer avance, 16:00 segundo avance, 16:30 escrutinio del Congreso,
 17:30 escrutinio del Senado. Es el ensayo general del domingo: mismos pasos que en el apartado 0, con `--simulacro`.

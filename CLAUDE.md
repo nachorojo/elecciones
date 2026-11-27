@@ -1,7 +1,7 @@
 ---
 estado: "EN MARCHA — web interna con el 29N en directo (recuento de Interior, gráficos para OBS con lienzo transparente (módulos oscuros o claros) y verde de Onda Cero, piezas para redes con mapa y pactómetro, proyección). Superadas las dos pruebas de Interior (18-N y 25-N); elecciones el domingo 29-N."
 revisado: "2026-11-27"
-proximo: "Decidir cuándo llevar la rama claude/keen-gates-t1fste (gráficos OBS transparentes) a la rama que publica Netlify, y probar las direcciones en OBS antes del domingo."
+proximo: "Víspera en el PC del trabajo (HANDOFF.md, apartado 0, pasos 1-5) y decidir la hora de llegada del domingo con el horario del apartado 0b."
 corre_en: "Netlify (proyecto `elecciones2030`) desde GitHub nachorojo/elecciones. Datos fuera del repo, en `Elecciones 2026/datos/` (OneDrive)."
 bloqueos: "Netlify: créditos (Pro, 5.000; auto recharge desactivado). Jurídico (LOREG 69.7) si la web se hace pública; guía de marca de Onda Cero."
 ---
