@@ -5,7 +5,8 @@
 <meta name="robots" content="noindex, nofollow">
 <title>29N · Gráficos para directo</title>
 <!--
-  Gráficos del 29N para capturar con OBS (fuente «Navegador», 1920 × 1080, fondo transparente).
+  Gráficos del 29N para capturar con OBS (fuente «Navegador», 1920 × 1080).
+  El lienzo es transparente (alfa real): fuera de los módulos se ve la señal de vídeo. Cada módulo lleva su propio fondo.
   Leen el mismo fichero que la web (../data/vivo_29n.json) y se refrescan solos cada 15 s.
 
   Dirección: .../directo/?vista=VISTA[&opción=valor…]
@@ -13,7 +14,8 @@
     vista=columna        columna lateral con todos los partidos con escaño (superpuesta)
     vista=arco           pantalla completa: hemiciclo (fuera 2026, dentro 2023) y tabla
     vista=participacion  pantalla completa: constitución de mesas y avances de las 14:00 y las 18:00
-    vista=provincia&provincia=28   pantalla completa: una provincia, con el último escaño
+    vista=provincia&provincia=28   pantalla completa: una provincia, con el último escaño. Al pasar el ratón sale un
+                         desplegable para cambiar de provincia (en OBS, con «Interactuar»); no se ve en emisión.
     vista=ticker         cinta inferior que corre con los escaños más disputados: las n=5 provincias donde a la
                          candidatura siguiente le faltan menos votos para quitar el último escaño (superpuesta).
                          minimo=50 (% escrutado de la provincia para entrar); velocidad=140 (píxeles por segundo)
@@ -23,38 +25,46 @@
                          Antes del escrutinio solo alterna participación y faldón.
   Galería con miniaturas de todos: galeria.html
   Opciones:
-    fondo=transparente | oscuro | blanco | croma   (por defecto: transparente en faldon/columna, oscuro en el resto;
-                                            blanco = versión clara: fondo blanco, paneles claros y texto oscuro)
+    fondo=transparente | blanco | oscuro | solido | croma
+        transparente (por defecto): lienzo transparente, módulos oscuros
+        blanco: lienzo transparente, módulos claros con texto oscuro (igual que tema=claro)
+        oscuro: módulos oscuros sobre lienzo opaco oscuro (para ver los gráficos sin vídeo detrás)
+        solido: lienzo opaco del color del tema (con fondo=solido&tema=claro, blanco)        croma: lienzo verde
+    tema=oscuro | claro  color de los módulos, si se quiere fijar aparte del fondo
     lado=derecha         columna a la derecha            paso=6     segundos por página del carrusel
     datos=simulacro | demo                  para ensayar sin recuento real (último envío del simulacro de Interior)
   Logos: si existe logos/<ID>.png (PP.png, PSOE.png, VOX.png, FA.png…), se muestra en lugar del bloque de color.
 -->
 <style>
   :root { --tinta: #0d1320; --panel: rgba(13, 19, 32, .94); --panel2: rgba(255, 255, 255, .07); --texto: #fff;
-          --tenue: rgba(255, 255, 255, .66); --acento: #19c37d; --sube: #3ddc84; --baja: #ff6b6b;
+          --tenue: rgba(255, 255, 255, .66); --acento: #01743e; --sobre-acento: #fff; --acento-texto: #3fbf85;
+          --sube: #3ddc84; --baja: #ff6b6b; --sombra: 0 12px 40px rgba(0, 0, 0, .45);
           --raya: rgba(255, 255, 255, .12); --pista: rgba(255, 255, 255, .12); --oro: #ffd166; }
+  /* --acento es el verde de Onda Cero (fondos, con texto blanco encima). Como texto sobre panel oscuro no se lee:
+     ahí se usa --acento-texto, el mismo verde aclarado; en el tema claro los dos son el corporativo. */
   * { box-sizing: border-box; margin: 0; }
   html, body { width: 1920px; height: 1080px; overflow: hidden; background: transparent;
                font-family: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; color: var(--texto);
                font-variant-numeric: tabular-nums; }
-  body.fondo-oscuro { background: radial-gradient(1200px 700px at 30% 20%, #1b2740, #0a0f1a 70%); }
-  body.fondo-croma { background: #00b140; }
-  /* Versión clara (fondo=blanco): mismos gráficos con fondo blanco, paneles claros y texto oscuro. */
-  body.fondo-blanco { background: #fff; --tinta: #fff; --panel: #f3f5f8; --panel2: rgba(13, 19, 32, .06); --texto: #0d1320;
-                      --tenue: rgba(13, 19, 32, .62); --acento: #19c37d; --sube: #0a8a4a; --baja: #c62828;
-                      --raya: rgba(13, 19, 32, .12); --pista: rgba(13, 19, 32, .1); --oro: #a85f00; }
-  body.fondo-blanco #faldon .barra, body.fondo-blanco #columna .col, body.fondo-blanco #ticker .barra { box-shadow: 0 6px 24px rgba(13, 19, 32, .18); }
-  body.fondo-blanco #faldon .pie { color: var(--texto); text-shadow: none; }
-  body.fondo-blanco #participacion .av.pendiente .n { color: rgba(13, 19, 32, .22); }
-  .vista { display: none; position: absolute; inset: 0; }
+  /* El lienzo (html, body y las secciones a pantalla completa) no pinta nada salvo que se pida un fondo opaco. */
+  body.lienzo-solido.tema-oscuro { background: radial-gradient(1200px 700px at 30% 20%, #1b2740, #0a0f1a 70%); }
+  body.lienzo-solido.tema-claro { background: #fff; }
+  body.lienzo-croma { background: #00b140; }
+  /* Tema claro: mismos gráficos con paneles claros y texto oscuro. */
+  body.tema-claro { --tinta: #fff; --panel: #f3f5f8; --panel2: rgba(13, 19, 32, .06); --texto: #0d1320;
+                    --tenue: rgba(13, 19, 32, .62); --acento-texto: #01743e; --sube: #0a8a4a; --baja: #c62828;
+                    --sombra: 0 6px 24px rgba(13, 19, 32, .22);
+                    --raya: rgba(13, 19, 32, .12); --pista: rgba(13, 19, 32, .1); --oro: #a85f00; }
+  body.tema-claro #participacion .av.pendiente .n { color: rgba(13, 19, 32, .22); }
+  .vista { display: none; position: absolute; inset: 0; background: transparent; }
   body[data-vista="faldon"] #faldon, body[data-vista="columna"] #columna, body[data-vista="arco"] #arco,
   body[data-vista="participacion"] #participacion, body[data-vista="provincia"] #provincia,
   body[data-vista="ticker"] #ticker { display: block; }
   /* ---------- Ticker de escaños disputados ---------- */
   #ticker .barra { position: absolute; left: 0; right: 0; bottom: 48px; height: 92px; display: flex; background: var(--panel);
-                   box-shadow: 0 12px 40px rgba(0, 0, 0, .45); }
+                   box-shadow: var(--sombra); }
   #ticker .cab { flex: none; display: flex; flex-direction: column; justify-content: center; padding: 0 34px; background: var(--acento);
-                 color: #04150d; z-index: 1; box-shadow: 14px 0 22px rgba(0, 0, 0, .45); }
+                 color: var(--sobre-acento); z-index: 1; box-shadow: 14px 0 22px rgba(0, 0, 0, .45); }
   #ticker .cab b { font-size: 27px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; line-height: 1.1; }
   #ticker .cab span { font-size: 17px; font-weight: 600; opacity: .8; }
   #ticker .cinta { flex: 1; overflow: hidden; }
@@ -79,8 +89,8 @@
 
   /* ---------- Faldón ---------- */
   #faldon .barra { position: absolute; left: 60px; right: 60px; bottom: 54px; height: 150px; display: flex;
-                   border-radius: 18px; overflow: hidden; background: var(--panel); box-shadow: 0 12px 40px rgba(0, 0, 0, .45); }
-  #faldon .cab { width: 330px; flex: none; padding: 18px 26px; background: var(--acento); color: #04150d;
+                   border-radius: 18px; overflow: hidden; background: var(--panel); box-shadow: var(--sombra); }
+  #faldon .cab { width: 330px; flex: none; padding: 18px 26px; background: var(--acento); color: var(--sobre-acento);
                  display: flex; flex-direction: column; justify-content: center; }
   #faldon .cab .t { font-size: 19px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
   #faldon .cab .n { font-size: 58px; font-weight: 800; line-height: 1.05; letter-spacing: -.02em; }
@@ -95,17 +105,18 @@
   #faldon .ficha .pct { font-size: 19px; color: var(--tenue); }
   #faldon .pista.previa { grid-template-columns: repeat(3, 1fr); }
   #faldon .pista.previa .ficha { padding: 0 34px; } #faldon .pista.previa .ficha .esc { font-size: 54px; }
-  #faldon .pie { position: absolute; right: 76px; bottom: 20px; font-size: 17px; color: #fff; opacity: .85;
-                 text-shadow: 0 1px 3px rgba(0, 0, 0, .8); }
+  #faldon .pie { position: absolute; right: 60px; bottom: 14px; font-size: 17px; line-height: 1; color: var(--texto);
+                 background: var(--panel); padding: 8px 16px; border-radius: 9px; }
+  #faldon .pie:empty { display: none; }
   @keyframes entra { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
 
   /* ---------- Columna ---------- */
   #columna .col { position: absolute; top: 40px; bottom: 40px; left: 40px; width: 430px; border-radius: 18px;
-                  background: var(--panel); box-shadow: 0 12px 40px rgba(0, 0, 0, .45); padding: 24px 22px;
+                  background: var(--panel); box-shadow: var(--sombra); padding: 24px 22px;
                   display: flex; flex-direction: column; }
   body.lado-derecha #columna .col { left: auto; right: 40px; }
   #columna h1 { font-size: 26px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; line-height: 1.1; }
-  #columna h1 b { color: var(--acento); display: block; }
+  #columna h1 b { color: var(--acento-texto); display: block; }
   #columna .escr { margin: 16px 0 14px; padding: 10px 16px; border-radius: 12px; background: var(--panel2);
                    display: flex; align-items: baseline; justify-content: space-between; }
   #columna .escr span { font-size: 18px; color: var(--tenue); font-weight: 600; }
@@ -126,8 +137,14 @@
   .lleno { padding: 56px 72px; display: grid; gap: 40px; height: 100%; }
   .titulo { display: flex; align-items: center; gap: 22px; }
   .titulo h1 { font-size: 46px; font-weight: 800; letter-spacing: -.01em; }
-  .titulo h1 b { color: var(--acento); }
+  .titulo h1 b { color: var(--acento-texto); }
   .titulo .hora { margin-left: auto; font-size: 24px; color: var(--tenue); font-weight: 600; }
+  /* Sobre vídeo, cada bloque de las pantallas completas lleva su fondo; lo que queda entre ellos es transparente. */
+  .titulo h1, .titulo .hora, .lleno .vacio { background: var(--panel); padding: 10px 24px; border-radius: 14px; box-shadow: var(--sombra); }
+  .titulo h1:empty, .titulo .hora:empty { display: none; }
+  .lleno .caja, .lleno .tabla .f, #participacion .av, #a-svg { background: var(--panel); box-shadow: var(--sombra); }
+  #a-svg { border-radius: 20px; padding: 22px 24px 12px; }
+  .lleno .tabla { overflow: visible; }
   .cajas { display: flex; gap: 18px; }
   .caja { flex: 1; background: var(--panel2); border-radius: 16px; padding: 18px 24px; }
   .caja b { display: block; font-size: 50px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
@@ -154,7 +171,7 @@
   .tabla.densa .f .esc .vs { display: none; }
   #participacion .lleno { grid-template-rows: auto 1fr auto; }
   #participacion .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: stretch; }
-  #participacion .av { background: var(--panel2); border-radius: 24px; padding: 40px 48px; display: flex; flex-direction: column; justify-content: center; }
+  #participacion .av { border-radius: 24px; padding: 40px 48px; display: flex; flex-direction: column; justify-content: center; }
   #participacion .av .h { font-size: 34px; font-weight: 700; color: var(--tenue); }
   #participacion .av .n { font-size: 190px; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
   #participacion .av .n small { font-size: 80px; }
@@ -165,9 +182,16 @@
   #participacion .av.pendiente .n { color: rgba(255, 255, 255, .25); }
   #provincia .lleno { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto 1fr; }
   #provincia .titulo, #provincia .ultimo { grid-column: 1 / -1; }
-  #provincia .ultimo { background: var(--acento); color: #04150d; border-radius: 16px; padding: 20px 28px; font-size: 32px; font-weight: 600; }
+  #provincia .ultimo { background: var(--acento); color: var(--sobre-acento); box-shadow: var(--sombra); border-radius: 16px; padding: 20px 28px; font-size: 32px; font-weight: 600; }
   #provincia .ultimo b { font-weight: 800; }
   .vacio { font-size: 34px; color: var(--tenue); font-weight: 600; align-self: center; }
+  /* Desplegable de provincia: solo aparece con el ratón encima (no sale en emisión). */
+  #elegir { display: none; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 5; opacity: 0;
+            transition: opacity .2s; background: var(--panel); color: var(--texto); padding: 8px 14px; border-radius: 10px;
+            box-shadow: var(--sombra); font-size: 20px; font-weight: 600; }
+  #elegir select { font: inherit; margin-left: 8px; padding: 4px 8px; border-radius: 7px; }
+  body[data-vista="provincia"]:not(.bucle) #elegir { display: block; }
+  body:hover #elegir, #elegir:focus-within { opacity: 1; }
 </style>
 </head>
 <body>
@@ -191,7 +215,7 @@
 
 <section id="arco" class="vista">
   <div class="lleno">
-    <div class="titulo"><h1>Elecciones generales <b>29N</b></h1><span class="sello" id="a-sello" hidden>SIMULACRO</span><span class="hora" id="a-h"></span></div>
+    <div class="titulo"><span class="sello" id="a-sello" hidden>SIMULACRO</span><span class="hora" id="a-h"></span></div>
     <div class="izq"><div id="a-svg"></div><div class="cajas" id="a-cajas"></div></div>
     <div class="tabla" id="a-tabla"></div>
   </div>
@@ -199,7 +223,7 @@
 
 <section id="participacion" class="vista">
   <div class="lleno">
-    <div class="titulo"><h1>Participación <b>29N</b></h1><span class="sello" id="p-sello" hidden>SIMULACRO</span><span class="hora" id="p-h"></span></div>
+    <div class="titulo"><h1>Participación</h1><span class="sello" id="p-sello" hidden>SIMULACRO</span><span class="hora" id="p-h"></span></div>
     <div class="dos" id="p-dos"></div>
     <div class="cajas" id="p-cajas"></div>
   </div>
@@ -211,6 +235,8 @@
     <div class="cinta" id="t-cinta"></div>
   </div>
 </section>
+
+<label id="elegir">Provincia<select id="v-prov"></select></label>
 
 <section id="provincia" class="vista">
   <div class="lleno">
@@ -229,9 +255,13 @@ const VISTAS = (Q.get("vistas") || TODAS.join(",")).split(",").filter((v) => TOD
 const PROVS = (Q.get("provincias") || "28,08,46,41,29,48,50").split(",");
 let VISTA = BUCLE ? VISTAS[0] || "arco" : Q.get("vista") || "arco";
 let PROV = Q.get("provincia") || PROVS[0];
-const SUPERPUESTA = !BUCLE && ["faldon", "columna", "ticker"].includes(VISTA);
 document.body.dataset.vista = VISTA;
-document.body.classList.add("fondo-" + (Q.get("fondo") || (SUPERPUESTA ? "transparente" : "oscuro")));
+// Lienzo transparente salvo que se pida opaco; «fondo=blanco» es el tema claro sobre lienzo transparente.
+const FONDO = Q.get("fondo") || "transparente";
+document.body.classList.add("tema-" + (Q.get("tema") === "claro" || (!Q.get("tema") && FONDO === "blanco") ? "claro" : "oscuro"));
+if (FONDO === "oscuro" || FONDO === "solido") document.body.classList.add("lienzo-solido");
+if (FONDO === "croma") document.body.classList.add("lienzo-croma");
+if (BUCLE) document.body.classList.add("bucle");
 if (Q.get("lado") === "derecha") document.body.classList.add("lado-derecha");
 const ORIGEN = { simulacro: "../data/simulacro_29n.json", demo: "../data/demo_29n.json" }[Q.get("datos")] || "../data/vivo_29n.json";
 const PASO = 1000 * Math.max(3, Number(Q.get("paso")) || 6);
@@ -456,6 +486,9 @@ function pintarParticipacion() {
 }
 function pintarProvincia() {
   const cod = PROV, a = D.provincias[cod];
+  const sel = $("#v-prov");
+  if (!sel.options.length) Object.entries(D.provincias).sort((x, y) => x[1].nombre.localeCompare(y[1].nombre, "es")).forEach(([k, p]) => sel.add(new Option(p.nombre, k)));
+  sel.value = cod;
   if (!a) return;
   $("#v-sello").hidden = !D.simulacro;
   $("#v-titulo").replaceChildren(a.nombre + " ", el("b", null, a.escanos_total + " escaños"));
@@ -528,6 +561,11 @@ async function cargar() {
     mostrar();
   } catch (e) { /* se mantiene lo último que se pintó */ }
 }
+$("#v-prov").addEventListener("change", (e) => {     // cambia de provincia sin recargar y deja la dirección al día
+  PROV = e.target.value;
+  Q.set("provincia", PROV); history.replaceState(null, "", "?" + Q.toString());
+  if (D) pintarProvincia();
+});
 cargar();
 setInterval(cargar, 15000);
 if (BUCLE) setInterval(siguiente, 1000 * Math.max(4, Number(Q.get("cada")) || 12));

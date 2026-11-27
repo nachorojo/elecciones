@@ -14,7 +14,11 @@
   .boton.principal { background: var(--acento); border-color: var(--acento); color: #fff; font-weight: 600; }
   .galeria { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
   .mini { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); overflow: hidden; box-shadow: var(--sombra); }
-  .mini a.marco { display: block; position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: #0a0f1a; }
+  /* Los gráficos tienen el lienzo transparente: el damero de la miniatura es lo que en OBS será la señal de vídeo. */
+  .mini a.marco { display: block; position: relative; aspect-ratio: 16 / 9; overflow: hidden; background-color: #3a4152;
+                  background-image: repeating-conic-gradient(#4a5266 0 25%, transparent 0 50%); background-size: 24px 24px; }
+  .mini label.prov { display: block; font-size: 13px; margin: 0 0 10px; }
+  .mini label.prov select { font: inherit; margin-left: 6px; max-width: 100%; }
   .mini iframe { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; border: 0; transform-origin: 0 0; pointer-events: none; }
   .mini .txt { padding: 12px 14px 14px; }
   .mini h3 { margin: 0 0 2px; font-size: 15.5px; }
@@ -41,20 +45,20 @@
     </label>
     <label>Fondo
       <select id="fondo">
-        <option value="">Oscuro</option>
-        <option value="blanco">Blanco</option>
+        <option value="">Módulos oscuros</option>
+        <option value="blanco">Módulos claros (blanco)</option>
       </select>
     </label>
     <a class="boton principal" id="bucle" target="_blank" rel="noopener">▶ Bucle a pantalla completa</a>
     <a class="boton" href="redes.html">Piezas verticales para redes</a>
   </div>
-  <p class="nota">Pulsa una miniatura para abrir el gráfico a tamaño real. El faldón y la columna se superponen al plano de estudio
-    (fondo transparente en OBS); aquí se ven sobre fondo oscuro. Antes de las 20:00 del día 29 el recuento real está vacío:
+  <p class="nota">Pulsa una miniatura para abrir el gráfico a tamaño real. Todos tienen el lienzo transparente: en OBS, fuera de
+    los módulos se ve la señal de vídeo (el damero de las miniaturas). Antes de las 20:00 del día 29 el recuento real está vacío:
     usa el ensayo para ver cómo quedan.</p>
   <div class="galeria" id="galeria"></div>
   <section class="aviso" style="margin-top:22px"><strong>Opciones de la dirección.</strong>
-    <code>fondo=transparente|oscuro|blanco|croma</code> · <code>lado=derecha</code> (columna) · <code>paso=6</code> (segundos del carrusel del faldón) ·
-    <code>provincia=28</code> (código de provincia) · en el ticker, <code>n=5</code> (provincias), <code>minimo=50</code> (% escrutado para entrar) y <code>velocidad=140</code> · en el bucle, <code>cada=12</code> (segundos por gráfico),
+    <code>fondo=blanco</code> (módulos claros; sin él, oscuros; el lienzo es transparente en los dos) · <code>fondo=oscuro</code> o <code>fondo=solido&amp;tema=claro</code> (lienzo opaco, para verlos sin vídeo detrás) · <code>fondo=croma</code> · <code>lado=derecha</code> (columna) · <code>paso=6</code> (segundos del carrusel del faldón) ·
+    <code>provincia=28</code> (código de provincia: elígela en el desplegable de la miniatura) · en el ticker, <code>n=5</code> (provincias), <code>minimo=50</code> (% escrutado para entrar) y <code>velocidad=140</code> · en el bucle, <code>cada=12</code> (segundos por gráfico),
     <code>vistas=arco,participacion,…</code> y <code>provincias=28,08,46,…</code>. La participación se compara con julio de 2023 y
     noviembre de 2019 (Ministerio del Interior).</section>
 </main>
@@ -66,9 +70,13 @@ const VISTAS = [
   ["faldon", "Faldón", "Barra inferior con carrusel de partidos. Superpuesto.", ""],
   ["ticker", "Ticker: escaños en el aire", "Cinta que corre con las 5 provincias donde el último escaño está a menos votos. Superpuesto.", ""],
   ["columna", "Columna", "Lateral con todos los partidos con escaño. Superpuesto.", ""],
-  ["provincia", "Provincia: Madrid", "Resultado y último escaño de una provincia.", "&provincia=28"],
-  ["provincia", "Provincia: Barcelona", "Cambia el código en la dirección para otra provincia.", "&provincia=08"],
+  ["provincia", "Provincia", "Resultado y último escaño de una provincia. Elige cuál en el desplegable.", "&provincia=28"],
 ];
+let PROVINCIAS = [], prov = "28";          // nombres de provincia, del fichero de datos (los trae aunque esté vacío)
+fetch("../data/vivo_29n.json", { cache: "no-store" }).then((r) => r.json()).then((d) => {
+  PROVINCIAS = Object.entries(d.provincias).map(([k, a]) => [k, a.nombre]).sort((x, y) => x[1].localeCompare(y[1], "es"));
+  pintar();
+}).catch(() => {});
 const sel = document.querySelector("#datos"), gal = document.querySelector("#galeria");
 sel.value = new URLSearchParams(location.search).get("datos") === "simulacro" ? "simulacro" : "";
 const base = new URL("index.html", location.href).href.replace(/index\.html$/, "");
@@ -79,11 +87,11 @@ function pintar() {
   document.querySelector("#bucle").href = `${base}?vista=bucle${d}`;
   gal.replaceChildren();
   VISTAS.forEach(([v, titulo, texto, extra]) => {
-    const superpuesta = v === "faldon" || v === "columna" || v === "ticker";
+    if (v === "provincia") extra = "&provincia=" + prov;
     const real = `${base}?vista=${v}${extra}${d}`;
     const caja = document.createElement("div"); caja.className = "mini";
-    const marco = Object.assign(document.createElement("a"), { className: "marco", href: real + (superpuesta && !blanco ? "&fondo=oscuro" : ""), target: "_blank", rel: "noopener" });
-    marco.appendChild(Object.assign(document.createElement("iframe"), { src: real + (superpuesta && !blanco ? "&fondo=oscuro" : ""), title: titulo, loading: "lazy", tabIndex: -1 }));
+    const marco = Object.assign(document.createElement("a"), { className: "marco", href: real, target: "_blank", rel: "noopener" });
+    marco.appendChild(Object.assign(document.createElement("iframe"), { src: real, title: titulo, loading: "lazy", tabIndex: -1 }));
     const txt = document.createElement("div"); txt.className = "txt";
     const url = document.createElement("div"); url.className = "url";
     const campo = Object.assign(document.createElement("input"), { value: real, readOnly: true });
@@ -91,7 +99,16 @@ function pintar() {
     const copiar = Object.assign(document.createElement("button"), { className: "boton", type: "button", textContent: "Copiar" });
     copiar.addEventListener("click", () => { campo.select(); (navigator.clipboard ? navigator.clipboard.writeText(real) : Promise.reject()).catch(() => document.execCommand("copy")); copiar.textContent = "Copiada"; setTimeout(() => { copiar.textContent = "Copiar"; }, 1500); });
     url.append(campo, copiar);
-    txt.append(Object.assign(document.createElement("h3"), { textContent: titulo }), Object.assign(document.createElement("p"), { textContent: texto }), url);
+    txt.append(Object.assign(document.createElement("h3"), { textContent: titulo }), Object.assign(document.createElement("p"), { textContent: texto }));
+    if (v === "provincia" && PROVINCIAS.length) {
+      const lab = Object.assign(document.createElement("label"), { className: "prov", textContent: "Provincia" });
+      const s = document.createElement("select");
+      PROVINCIAS.forEach(([k, n]) => s.add(new Option(n, k)));
+      s.value = prov;
+      s.addEventListener("change", () => { prov = s.value; pintar(); });
+      lab.appendChild(s); txt.appendChild(lab);
+    }
+    txt.appendChild(url);
     caja.append(marco, txt);
     gal.appendChild(caja);
   });

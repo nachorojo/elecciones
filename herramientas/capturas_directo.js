@@ -16,9 +16,11 @@ const servidor = http.createServer((req, res) => {
   const f = ruta.endsWith("/data/vivo_29n.json") ? datos : path.join(WEB, ruta.endsWith("/") ? ruta + "index.html" : ruta);
   fs.readFile(f, (e, b) => { res.writeHead(e ? 404 : 200, { "Content-Type": TIPOS[path.extname(f)] || "application/octet-stream" }); res.end(e ? "" : b); });
 });
-const DIRECTO = [["arco", "vista=arco"], ["faldon", "vista=faldon&fondo=oscuro"], ["columna", "vista=columna&fondo=oscuro"],
+// Los gráficos tienen el lienzo transparente; aquí se fotografían sobre un fondo de prueba (FONDO) que hace de señal de vídeo.
+const FONDO = "html { background: linear-gradient(115deg, #e9d8a6 0%, #94d2bd 30%, #264653 55%, #f4a261 80%, #fefae0 100%) !important; }";
+const DIRECTO = [["arco", "vista=arco"], ["faldon", "vista=faldon"], ["columna", "vista=columna"],
   ["participacion", "vista=participacion"], ["provincia28", "vista=provincia&provincia=28"], ["provincia08", "vista=provincia&provincia=08"],
-  ["ticker", "vista=ticker&fondo=oscuro"], ["blanco_arco", "vista=arco&fondo=blanco"], ["blanco_faldon", "vista=faldon&fondo=blanco"],
+  ["ticker", "vista=ticker"], ["blanco_arco", "vista=arco&fondo=blanco"], ["blanco_faldon", "vista=faldon&fondo=blanco"],
   ["blanco_columna", "vista=columna&fondo=blanco"], ["blanco_participacion", "vista=participacion&fondo=blanco"],
   ["blanco_provincia28", "vista=provincia&provincia=28&fondo=blanco"], ["blanco_ticker", "vista=ticker&fondo=blanco"]];
 const REDES = [["redes_post_mapa", "formato=post&tema=mapa&limpio", 1080, 1350], ["redes_post_pactometro", "formato=post&tema=pactometro&limpio", 1080, 1350],
@@ -30,13 +32,13 @@ const REDES = [["redes_post_mapa", "formato=post&tema=mapa&limpio", 1080, 1350],
   const base = `http://127.0.0.1:${servidor.address().port}/directo/`;
   fs.mkdirSync(salida, { recursive: true });
   const nav = await chromium.launch();
-  const foto = async (nombre, url, w, h) => {
+  const foto = async (nombre, url, w, h, css) => {
     const pag = await nav.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
-    await pag.goto(url); await pag.waitForTimeout(900);
+    await pag.goto(url); if (css) await pag.addStyleTag({ content: css }); await pag.waitForTimeout(900);
     await pag.screenshot({ path: path.join(salida, prefijo + nombre + ".png") });
     await pag.close();
   };
-  for (const [n, q] of DIRECTO) await foto(n, base + "?" + q, 1920, 1080);
+  for (const [n, q] of DIRECTO) await foto(n, base + "?" + q, 1920, 1080, FONDO);
   if (fs.existsSync(path.join(WEB, "directo", "redes.html"))) for (const [n, q, w, h] of REDES) await foto(n, base + "redes.html?" + q, w, h);
   await nav.close(); servidor.close();
   console.log("capturas en", salida);

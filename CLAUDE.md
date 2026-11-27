@@ -1,7 +1,7 @@
 ---
-estado: "EN MARCHA — web interna con el 29N en directo (recuento de Interior, gráficos para OBS con fondo oscuro y blanco, piezas para redes con mapa y pactómetro, proyección). Superadas las dos pruebas de Interior (18-N y 25-N); elecciones el domingo 29-N."
-revisado: "2026-11-25"
-proximo: "En el PC: git pull --no-edit origin claude/peaceful-dijkstra-9hbim8, vaciar la página (python -m pipeline.escrutinio_29n --vacio; git add web/data; git commit; git push) y mirar el saldo de créditos de Netlify para fijar --cada el domingo."
+estado: "EN MARCHA — web interna con el 29N en directo (recuento de Interior, gráficos para OBS con lienzo transparente (módulos oscuros o claros) y verde de Onda Cero, piezas para redes con mapa y pactómetro, proyección). Superadas las dos pruebas de Interior (18-N y 25-N); elecciones el domingo 29-N."
+revisado: "2026-11-27"
+proximo: "Decidir cuándo llevar la rama claude/keen-gates-t1fste (gráficos OBS transparentes) a la rama que publica Netlify, y probar las direcciones en OBS antes del domingo."
 corre_en: "Netlify (proyecto `elecciones2030`) desde GitHub nachorojo/elecciones. Datos fuera del repo, en `Elecciones 2026/datos/` (OneDrive)."
 bloqueos: "Redacción: validar los bloques del pactómetro. Netlify: créditos (Pro, 5.000; auto recharge desactivado). Jurídico (LOREG 69.7) si la web se hace pública; guía de marca de Onda Cero."
 ---
@@ -258,6 +258,15 @@ python -m pytest            # 68 tests; se saltan si no hay Parquet bruto (ni fi
 - **Git en OneDrive:** `git config windows.appendAtomically false` en el PC (sin él, `git pull`/`commit` fallan a ratos con «unable to append to .git/logs/HEAD»).
 - **Coste de Netlify medido:** el saldo pasó de 4.416,7 a 4.173,7 créditos (243) con unas 16–20 subidas desde la medición: **unos 15 créditos por despliegue**, la cifra publicada. Con 4.173 quedan unos 275 despliegues hasta la recarga del 17-D (bolsa compartida con los demás proyectos de la cuenta). Para el domingo: `--cada-previa 10` (constitución y avances) y cada envío durante el recuento → unos 125 despliegues, ~1.900 créditos.
 - **Pendiente tras la prueba:** decidir «auto recharge»; validar con Redacción los bloques del pactómetro y la frase «le bastaría sumar a…».
+
+## Gráficos de OBS: lienzo transparente y verde de Onda Cero (2026-11-27, pedido por el equipo)
+- **Rama `claude/keen-gates-t1fste`, sin fusionar**: Netlify publica otra rama; hasta que se lleve allí, `elecciones2030.netlify.app` no cambia.
+- **Lienzo transparente siempre** (`web/directo/index.html`): `html`, `body` y las secciones no pintan nada; cada módulo lleva su fondo (título, hora, hemiciclo, cajas, filas de la tabla, avances, pie del faldón). Comprobado con Playwright (`omitBackground`): alfa 0 fuera de los módulos, 255 dentro. **Cambia el significado de `fondo=`**: `blanco` = módulos claros sobre lienzo transparente (antes pintaba la pantalla de blanco); sin `fondo`, módulos oscuros; `fondo=oscuro` o `fondo=solido&tema=claro` devuelven el lienzo opaco; `croma` sigue. **Sin probar en OBS** (solo en Chromium).
+- **Color:** `--acento` = `#01743e` (verde de Onda Cero) con texto blanco encima (cabecera del faldón y del ticker, último escaño). Como texto sobre panel oscuro no se lee, así que el tema oscuro usa `--acento-texto: #3fbf85` (aclarado **elegido por mí**, no corporativo). **`redes.html` sigue con `#19c37d`** (no se pidió; su lienzo es oscuro).
+- Quitado el título «Elecciones generales 29N» del hemiciclo y el «29N» de participación.
+- **Provincias:** la galería tiene una sola tarjeta «Provincia» con desplegable (cambia miniatura y dirección); la vista `provincia` tiene además un desplegable que solo aparece con el ratón encima (en OBS, con «Interactuar») y cambia de provincia sin recargar.
+- `herramientas/capturas_directo.js` fotografía ahora los gráficos sobre un degradado que hace de señal de vídeo.
+- El equipo mencionó una captura de referencia («Quedaría así») que **no llegó** a la conversación: el resultado no está contrastado con ella.
 
 ## Calendario del 29N
 - **28 de octubre de 2026**: candidaturas presentadas (BOE-A-2026-22607); **3 de noviembre**: proclamadas; 7 de noviembre: corrección. Recogido (ver sección anterior). Campaña: 13–27 de noviembre. Constitución de las Cámaras: 23 de diciembre.
