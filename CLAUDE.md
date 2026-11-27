@@ -269,7 +269,7 @@ python -m pytest            # 68 tests; se saltan si no hay Parquet bruto (ni fi
 - El equipo mencionó una captura de referencia («Quedaría así») que **no llegó** a la conversación: el resultado no está contrastado con ella.
 
 ## Piezas para redes con fondo claro y logos (2026-11-27, pedido por el equipo)
-- `web/directo/redes.html`: fondo blanco, texto oscuro y verde `#01743e` en todas las piezas y formatos (los tamaños no cambian). Cabecera con el logo «29N elecciones generales» a la izquierda y el de Onda Cero a la derecha (`web/directo/logos/redes_29n.png`, `redes_ondacero.png`), pintados a su tamaño; si falta el fichero sale un rótulo de texto. **Los logos son recortes provisionales de la imagen de referencia que pasó el equipo (webp, algo blandos): pedir los originales.**
+- `web/directo/redes.html`: fondo blanco, texto oscuro y verde `#01743e` en todas las piezas y formatos (los tamaños no cambian). Cabecera con el logo «29N elecciones generales» a la izquierda y el de Onda Cero a la derecha (`web/directo/logos/redes_29n.png`, `redes_ondacero.png`), pintados a su tamaño; si falta el fichero sale un rótulo de texto. El de Onda Cero es el original que pasó Nacho, reducido a 138 × 106; **el de «29N elecciones generales» sigue siendo un recorte provisional de la imagen de referencia (algo blando): pedir el original.**
 - Pactómetro: los totales de cada bloque van en dos cajas teñidas, como en la referencia. **No se ha copiado el reparto de la referencia** (ponía a Junts, PNV y BNG en la columna del PP): siguen los bloques acordados y el grupo «fuera de los dos bloques», pendientes de Redacción.
 
 ## Calendario del 29N

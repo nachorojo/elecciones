@@ -3,5 +3,5 @@ EH_BILDU.png, PNV.png, BNG.png, CC.png, COMPROMIS.png, NC.png, ADELANTE.png, TER
 Cuadrados (p. ej. 256 x 256). Si no hay fichero, se muestra un bloque con el color y las siglas.
 
 Cabecera de las piezas para redes (redes.html): redes_29n.png y redes_ondacero.png. Se pintan a su tamaño, sin escalar
-(unos 316 x 118 y 137 x 106). Los que hay son RECORTES PROVISIONALES de una imagen de referencia (webp): sustituir por
-los originales, con fondo blanco o transparente y esas medidas aproximadas.
+(unos 316 x 118 y 137 x 106). redes_ondacero.png es el original reducido; redes_29n.png es un RECORTE PROVISIONAL de una imagen de referencia: sustituir por
+el original, con fondo blanco o transparente y esas medidas aproximadas.
