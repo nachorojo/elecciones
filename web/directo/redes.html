@@ -18,7 +18,7 @@
     tema=resultado | mapa | pactometro | participacion | provincia&provincia=28
                        (resultado, mapa y pactómetro pasan solos a participación si aún no hay recuento)
     Pactómetro: izq= y der= cambian los bloques (identificadores separados por comas: PSOE,FA,PODEMOS,ERC…). Por defecto,
-                       der=PP,VOX e izq=PSOE,FA,PODEMOS,ADELANTE,COMPROMIS,NC,ERC,EH_BILDU,BNG; lo demás queda «en medio».
+                       der=PP,VOX e izq=PSOE,FA,PODEMOS,ADELANTE,COMPROMIS,NC,ERC,EH_BILDU,BNG,GBAI; lo demás queda «en medio».
                        Es una suma aritmética de escaños: los bloques los decide Redacción.
     guias              pinta en rojo las zonas que tapa la interfaz de cada red (no salen en el PNG descargado)
     limpio             solo el lienzo, a tamaño real (para capturar con OBS como fuente «Navegador» de 1080 × 1920)
@@ -125,7 +125,7 @@ const E = { formato: Q.get("formato") || "post", tema: Q.get("tema") || "resulta
             datos: Q.get("datos") || "", guias: Q.has("guias") };
 if (!FORMATOS[E.formato]) E.formato = "post";
 const lista = (k, def) => (Q.get(k) || def).split(",").map((x) => x.trim().toUpperCase()).filter(Boolean);
-const BLOQUE_IZQ = lista("izq", "PSOE,FA,PODEMOS,ADELANTE,COMPROMIS,NC,ERC,EH_BILDU,BNG"), BLOQUE_DER = lista("der", "PP,VOX");
+const BLOQUE_IZQ = lista("izq", "PSOE,FA,PODEMOS,ADELANTE,COMPROMIS,NC,ERC,EH_BILDU,BNG,GBAI"), BLOQUE_DER = lista("der", "PP,VOX");
 
 /* ---------- utilidades de dibujo ---------- */
 function txt(t, x, y, tam, peso = 700, color = TEXTO, alin = "left", ancho = 0) {

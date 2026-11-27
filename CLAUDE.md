@@ -3,7 +3,7 @@ estado: "EN MARCHA — web interna con el 29N en directo (recuento de Interior, 
 revisado: "2026-11-27"
 proximo: "Decidir cuándo llevar la rama claude/keen-gates-t1fste (gráficos OBS transparentes) a la rama que publica Netlify, y probar las direcciones en OBS antes del domingo."
 corre_en: "Netlify (proyecto `elecciones2030`) desde GitHub nachorojo/elecciones. Datos fuera del repo, en `Elecciones 2026/datos/` (OneDrive)."
-bloqueos: "Redacción: validar los bloques del pactómetro. Netlify: créditos (Pro, 5.000; auto recharge desactivado). Jurídico (LOREG 69.7) si la web se hace pública; guía de marca de Onda Cero."
+bloqueos: "Netlify: créditos (Pro, 5.000; auto recharge desactivado). Jurídico (LOREG 69.7) si la web se hace pública; guía de marca de Onda Cero."
 ---
 
 > **Cierre de sesión (regla del gestor de proyectos).** Al terminar una sesión con avance real, actualiza SOLO la cabecera de este documento (`estado`, `revisado` con la fecha de hoy, `proximo` con un único paso concreto y `bloqueos`). El gestor de proyectos la lee desde la copia de OneDrive ("Proyectos Claude.xlsx"). Sin claves ni contraseñas en la cabecera. Si trabajas en la nube desde GitHub, Nacho tiene que hacer `git pull` en la carpeta local para que se vea.
@@ -270,6 +270,7 @@ python -m pytest            # 68 tests; se saltan si no hay Parquet bruto (ni fi
 
 ## Piezas para redes con fondo claro y logos (2026-11-27, pedido por el equipo)
 - `web/directo/redes.html`: fondo blanco, texto oscuro y verde `#01743e` en todas las piezas y formatos (los tamaños no cambian). Cabecera con el logo «29N elecciones generales» a la izquierda y el de Onda Cero a la derecha (`web/directo/logos/redes_29n.png`, `redes_ondacero.png`), pintados a su tamaño; si falta el fichero sale un rótulo de texto. El de Onda Cero es el original que pasó Nacho, reducido a 138 × 106; **el de «29N elecciones generales» sigue siendo un recorte provisional de la imagen de referencia (algo blando): pedir el original.**
+- **Bloques del pactómetro validados por Nacho (27-N):** bloque del PSOE = PSOE, FA, Podemos, Adelante, Compromís, NC, ERC, EH Bildu, BNG y **Geroa Bai** (añadido); bloque del PP = PP y Vox; **Junts y PNV no van a priori en ningún bloque** (quedan «fuera», con CC, SALF, Teruel Existe y el resto); la frase «le bastaría sumar a…» se queda.
 - Pactómetro: los totales de cada bloque van en dos cajas teñidas, como en la referencia. **No se ha copiado el reparto de la referencia** (ponía a Junts, PNV y BNG en la columna del PP): siguen los bloques acordados y el grupo «fuera de los dos bloques», pendientes de Redacción.
 
 ## Calendario del 29N
