@@ -5,6 +5,7 @@ original. Léelo entero antes de tocar nada; después lee `CLAUDE.md` (hallazgos
 
 ## 0b. Domingo 29N: horario (escrito el 2026-11-27)
 Un solo PC capturando, el del trabajo (el probado el 18-N y el 25-N). Los pasos numerados son los del apartado 0.
+**Guía paso a paso para delegar la jornada (sin conocer el proyecto): [DOMINGO_29N.md](DOMINGO_29N.md).**
 Horas de Interior según el manual: avances a las 14:00 y a las 18:00, escrutinio desde las 20:00, publicación de resultados a las 21:00.
 **No sabemos** a qué hora empieza Interior a servir la constitución de mesas ni si la API da recuento entre las 20:00 y las 21:00.
 
