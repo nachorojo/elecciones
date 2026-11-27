@@ -7,6 +7,7 @@
 <title>29N · Piezas para redes</title>
 <!--
   Piezas verticales del 29N para redes, dibujadas en un lienzo al tamaño nativo de cada formato y descargables en PNG.
+  Fondo claro, con los logos de la cabecera en logos/redes_29n.png y logos/redes_ondacero.png (se pintan a su tamaño).
   Leen el mismo fichero que la web (../data/vivo_29n.json) y se refrescan cada 15 s.
 
   Dirección: .../directo/redes.html?formato=FORMATO&tema=TEMA[&opción=valor…]
@@ -31,12 +32,12 @@
   header.cabecera p { margin: 6px 0 0; color: rgba(255,255,255,.66); font-size: 14px; max-width: 80ch; }
   nav.menu { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 24px; }
   nav.menu a { color: #fff; text-decoration: none; font-size: 14px; padding: 6px 12px; border-radius: 8px; background: rgba(255,255,255,.08); }
-  nav.menu a[aria-current] { background: #19c37d; color: #04150d; font-weight: 700; }
+  nav.menu a[aria-current] { background: #01743e; color: #fff; font-weight: 700; }
   main { display: flex; flex-wrap: wrap; gap: 24px; padding: 12px 24px 40px; align-items: flex-start; }
   .mandos { display: grid; gap: 14px; width: 300px; font-size: 15px; }
   .mandos label { display: grid; gap: 5px; color: rgba(255,255,255,.75); }
   .mandos select, .mandos button { font: inherit; padding: 9px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.25); background: #131b2c; color: #fff; }
-  .mandos button { background: #19c37d; color: #04150d; font-weight: 800; border: 0; cursor: pointer; }
+  .mandos button { background: #01743e; color: #fff; font-weight: 800; border: 0; cursor: pointer; }
   .mandos .marca { display: flex; gap: 8px; align-items: center; }
   .mandos p { margin: 0; font-size: 13px; line-height: 1.45; color: rgba(255,255,255,.6); }
   .mandos code { font-size: 12px; word-break: break-all; color: #9fe3c4; }
@@ -105,7 +106,12 @@ const FORMATOS = {
   reel:     { w: 1080, h: 1920, z: [64, 270, 930, 1250], tapa: [[0, 0, 1080, 270], [0, 1250, 1080, 670], [930, 270, 150, 980]] },
   post:     { w: 1080, h: 1350, z: [64, 64, 1016, 1286], tapa: [] },
 };
-const TINTA = "#0d1320", TENUE = "rgba(255,255,255,.66)", ACENTO = "#19c37d", SUBE = "#3ddc84", BAJA = "#ff6b6b";
+// Fondo claro (pedido por el equipo el 27-N). TINTA separa los tramos de color; BLANCO es el texto que va sobre color.
+const TINTA = "#fff", TEXTO = "#0d1320", TENUE = "rgba(13,19,32,.62)", ACENTO = "#01743e", SUBE = "#0a8a4a", BAJA = "#c62828";
+const BLANCO = "#fff", PANEL = "#eef0f3", PISTA = "#dfe3e8", FONDO = "#fff";
+// Logos de la cabecera (se dibujan a su tamaño, sin escalar). Si falta alguno, va un rótulo de texto en su lugar.
+const LOGOS = {};
+["29n", "ondacero"].forEach((k) => { const i = new Image(); i.onload = () => { LOGOS[k] = i; if (D) pintar(E.guias); }; i.src = `logos/redes_${k}.png`; });
 const FUENTE = '"Inter", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif';
 const col = (f) => COLOR[f] || (f === "SUMAR" ? "#E51C55" : "#8D98A6");
 const nom = (p) => NOMBRE[p.f] || p.s;
@@ -122,7 +128,7 @@ const lista = (k, def) => (Q.get(k) || def).split(",").map((x) => x.trim().toUpp
 const BLOQUE_IZQ = lista("izq", "PSOE,FA,PODEMOS,ADELANTE,COMPROMIS,NC,ERC,EH_BILDU,BNG"), BLOQUE_DER = lista("der", "PP,VOX");
 
 /* ---------- utilidades de dibujo ---------- */
-function txt(t, x, y, tam, peso = 700, color = "#fff", alin = "left", ancho = 0) {
+function txt(t, x, y, tam, peso = 700, color = TEXTO, alin = "left", ancho = 0) {
   c.font = `${peso} ${tam}px ${FUENTE}`; c.fillStyle = color; c.textAlign = alin; c.textBaseline = "alphabetic";
   let s = String(t);
   // Si no cabe, primero se encoge la letra (hasta el 65 %) y solo después se corta con puntos suspensivos.
@@ -146,19 +152,20 @@ function variacion(d, x, y, tam, alin = "right") {
   return txt(d > 0 ? `+${d}` : d < 0 ? `−${-d}` : "=", x, y, tam, 800, d > 0 ? SUBE : d < 0 ? BAJA : TENUE, alin);
 }
 function fondo(F) {
-  const g = c.createRadialGradient(F.w * .3, F.h * .18, 0, F.w * .3, F.h * .18, F.h * .8);
-  g.addColorStop(0, "#1b2740"); g.addColorStop(1, "#0a0f1a");
-  c.fillStyle = g; c.fillRect(0, 0, F.w, F.h);
+  c.fillStyle = FONDO; c.fillRect(0, 0, F.w, F.h);
 }
 // Cabecera común. Devuelve la y donde sigue el contenido.
 function cabecera(F, titulo, dato, rotulo) {
-  const [x0, y0, x1] = F.z;
-  let x = x0 + txt("ELECCIONES GENERALES", x0, y0 + 34, 30, 800, "#fff") + 12;
-  x += txt("29N", x, y0 + 34, 30, 800, ACENTO) + 18;
-  if (D.simulacro) { caja(x, y0 + 6, 178, 36, 6, "#ffb020"); txt("SIMULACRO", x + 89, y0 + 32, 22, 800, "#1a1300", "center"); }
-  txt(titulo, x0, y0 + 104, 58, 800, "#fff", "left", x1 - x0 - (dato ? 330 : 0));
-  if (dato) { txt(dato, x1, y0 + 104, 76, 800, ACENTO, "right"); txt(rotulo, x1, y0 + 138, 24, 600, TENUE, "right"); }
-  return y0 + 160;
+  const [x0, , x1] = F.z, y0 = F.z[1] + (F.tapa.length ? 22 : 0), yl = y0 - 22, alto = 118;   // franja de logos (dentro de la zona útil)
+  const L = LOGOS["29n"], O = LOGOS.ondacero;
+  if (L) c.drawImage(L, x0 + 24, yl + (alto - L.height) / 2);
+  else { const an = txt("29N", x0, yl + 84, 64, 800, TEXTO); txt("elecciones", x0 + an + 12, yl + 58, 26, 700, TEXTO); txt("generales", x0 + an + 12, yl + 84, 26, 700, TEXTO); }
+  if (O) c.drawImage(O, x1 - 44 - O.width, yl + (alto - O.height) / 2);
+  else txt("ONDA CERO", x1, yl + 76, 34, 800, ACENTO, "right");
+  if (D.simulacro) { const xs = (x0 + x1) / 2 - 89; caja(xs, yl + 41, 178, 36, 6, "#ffb020"); txt("SIMULACRO", xs + 89, yl + 67, 22, 800, "#1a1300", "center"); }
+  txt(titulo, x0, y0 + 164, 58, 800, TEXTO, "left", x1 - x0 - (dato ? 330 : 0));
+  if (dato) { txt(dato, x1, y0 + 164, 76, 800, ACENTO, "right"); txt(rotulo, x1, y0 + 198, 24, 600, TENUE, "right"); }
+  return y0 + 220;
 }
 function pie(F) {
   const [x0, , x1, y1] = F.z;
@@ -172,15 +179,15 @@ function arco(cx, cy, r1, r2, lista, opacidad, tam) {
   lista.forEach(([f, e]) => {
     const a0 = Math.PI + Math.PI * acum / 350, a1 = Math.PI + Math.PI * (acum + e) / 350;
     c.beginPath(); c.arc(cx, cy, r2, a0, a1); c.arc(cx, cy, r1, a1, a0, true); c.closePath();
-    c.globalAlpha = f ? opacidad : 1; c.fillStyle = f ? col(f) : "rgba(255,255,255,.1)"; c.fill();
+    c.globalAlpha = f ? opacidad : 1; c.fillStyle = f ? col(f) : PISTA; c.fill();
     c.globalAlpha = 1; c.strokeStyle = TINTA; c.lineWidth = 3; c.stroke();
-    if (f && e >= 14) { const m = (a0 + a1) / 2, r = (r1 + r2) / 2; txt(e, cx + r * Math.cos(m), cy + r * Math.sin(m) + tam * .35, tam, 800, "#fff", "center"); }
+    if (f && e >= 14) { const m = (a0 + a1) / 2, r = (r1 + r2) / 2; txt(e, cx + r * Math.cos(m), cy + r * Math.sin(m) + tam * .35, tam, 800, BLANCO, "center"); }
     acum += e;
   });
   if (lista[0][0] && acum < 350) {        // escaños aún sin asignar (provincias sin recuento)
     const a0 = Math.PI + Math.PI * acum / 350;
     c.beginPath(); c.arc(cx, cy, r2, a0, 2 * Math.PI); c.arc(cx, cy, r1, 2 * Math.PI, a0, true); c.closePath();
-    c.fillStyle = "rgba(255,255,255,.1)"; c.fill();
+    c.fillStyle = PISTA; c.fill();
     if (350 - acum >= 30) {
       const m = (a0 + 2 * Math.PI) / 2, r = (r1 + r2) / 2;
       txt(350 - acum, cx + r * Math.cos(m), cy + r * Math.sin(m), tam, 800, TENUE, "center");
@@ -201,21 +208,21 @@ function filas(F, a, y0, y1, antes) {
   const completo = D.nacional.partidos.reduce((t, p) => t + p.e, 0) >= D.nacional.escanos_total;
   lista.forEach((p, i) => {
     const y = y0 + i * alto, base = y + h / 2;
-    caja(x0, y, w, h, 14, "rgba(255,255,255,.07)");
+    caja(x0, y, w, h, 14, PANEL);
     caja(x0, y, Math.max(14, (w - 0) * p.v / max * .999), h, 14, col(p.f) + "55");      // barra de voto, de fondo
     caja(x0, y, 14, h, 7, col(p.f));
-    txt(nom(p), x0 + 34, base + 13 * k, 36 * k, 800, "#fff", "left", w - 430);
+    txt(nom(p), x0 + 34, base + 13 * k, 36 * k, 800, TEXTO, "left", w - 430);
     txt(dec(100 * p.v / a.validos, 1) + " %", x1 - 250, base + 11 * k, 30 * k, 600, TENUE, "right");
     // En el total nacional no se compara con 2023 mientras queden escaños sin asignar.
     const b = antes ? (E2023[p.f] === undefined ? undefined : antes[p.f] || 0) : completo ? E2023[p.f] : undefined;
-    txt(p.e, x1 - (b === undefined ? 24 : 96), base + 20 * k, 56 * k, 800, "#fff", "right");
+    txt(p.e, x1 - (b === undefined ? 24 : 96), base + 20 * k, 56 * k, 800, TEXTO, "right");
     if (b !== undefined) variacion(p.e - b, x1 - 20, base + 12 * k, 28 * k);
   });
   if (resto) {
     const y = y0 + lista.length * alto, base = y + h / 2;
-    caja(x0, y, w, h, 14, "rgba(255,255,255,.07)");
+    caja(x0, y, w, h, 14, PANEL);
     txt(`Otras ${resto.n} candidaturas`, x0 + 34, base + 12 * k, 32 * k, 700, TENUE);
-    txt(resto.e, x1 - 24, base + 20 * k, 56 * k, 800, "#fff", "right");
+    txt(resto.e, x1 - 24, base + 20 * k, 56 * k, 800, TEXTO, "right");
   }
 }
 
@@ -228,8 +235,8 @@ function resultado(F) {
   arco(cx, cy, R * .67, R, conEscano(a).filter((p) => p.e > 0).map((p) => [p.f, p.e]), 1, R * .085);
   arco(cx, cy, R * .40, R * .62, ARCO2023, .8, R * .06);
   txt("Mayoría absoluta", cx, cy - R * .16, R * .058, 600, TENUE, "center");
-  txt("176", cx, cy - 4, R * .13, 800, "#fff", "center");
-  c.setLineDash([8, 6]); c.strokeStyle = "#fff"; c.lineWidth = 3; c.beginPath(); c.moveTo(cx, cy - R - 4); c.lineTo(cx, cy - R * .64); c.stroke(); c.setLineDash([]);
+  txt("176", cx, cy - 4, R * .13, 800, TEXTO, "center");
+  c.setLineDash([8, 6]); c.strokeStyle = TEXTO; c.lineWidth = 3; c.beginPath(); c.moveTo(cx, cy - R - 4); c.lineTo(cx, cy - R * .64); c.stroke(); c.setLineDash([]);
   txt("Fuera, 2026 · dentro, 2023", cx, cy + 34, 22, 600, TENUE, "center");
   const asignados = a.partidos.reduce((t, p) => t + p.e, 0);
   txt(asignados >= a.escanos_total ? "escaños y variación frente a 2023" : `escaños asignados hasta ahora: ${asignados} de ${a.escanos_total}`, x1, cy + 34 + 38, 20, 600, TENUE, "right");
@@ -241,21 +248,21 @@ function participacion(F) {
   const yPie = pie(F), hueco = yPie - y - 130, alto = Math.min(470, hueco / 2 - 16), k = alto / 470;
   [["Avance de las 14:00", av[0], AV_PREVIOS[0]], ["Avance de las 18:00", av[1], AV_PREVIOS[1]]].forEach(([t, v, antes], i) => {
     const yy = y + i * (alto + 24);
-    caja(x0, yy, w, alto, 24, "rgba(255,255,255,.07)");
+    caja(x0, yy, w, alto, 24, PANEL);
     txt(t, x0 + 40, yy + 66 * k, 38 * k, 700, TENUE);
     if (v > 0) {
       const an = txt(dec(v, 1), x0 + 36, yy + 250 * k, 200 * k, 800);
       txt("%", x0 + 46 + an, yy + 250 * k, 90 * k, 800);
-      caja(x0 + 40, yy + 286 * k, w - 80, 20 * k, 10 * k, "rgba(255,255,255,.12)"); caja(x0 + 40, yy + 286 * k, (w - 80) * Math.min(100, v) / 100, 20 * k, 10 * k, ACENTO);
+      caja(x0 + 40, yy + 286 * k, w - 80, 20 * k, 10 * k, PISTA); caja(x0 + 40, yy + 286 * k, (w - 80) * Math.min(100, v) / 100, 20 * k, 10 * k, ACENTO);
       const d = v - antes[2023];
       const an2 = txt((d > 0 ? "▲ " : d < 0 ? "▼ " : "= ") + dec(Math.abs(d), 2) + " puntos", x0 + 40, yy + 366 * k, 38 * k, 800, d > 0 ? SUBE : d < 0 ? BAJA : TENUE);
       txt(" respecto a 2023", x0 + 40 + an2, yy + 366 * k, 38 * k, 600);
       txt(`Julio de 2023: ${dec(antes[2023], 2)} %  ·  Noviembre de 2019: ${dec(antes[2019], 2)} %`, x0 + 40, yy + 420 * k, 27 * k, 600, TENUE);
-    } else { txt("– –", x0 + 36, yy + 230 * k, 120 * k, 800, "rgba(255,255,255,.25)"); txt("Pendiente", x0 + 40, yy + 366 * k, 38 * k, 600, TENUE); }
+    } else { txt("– –", x0 + 36, yy + 230 * k, 120 * k, 800, "rgba(13,19,32,.22)"); txt("Pendiente", x0 + 40, yy + 366 * k, 38 * k, 600, TENUE); }
   });
   const yy = y + 2 * (alto + 24), mitad = (w - 20) / 2;
   [[m.total ? dec(100 * m.constituidas / m.total, 1) + " %" : "—", "mesas constituidas"], [a.censo ? num(a.censo) : "—", "electores"]].forEach(([v, t], i) => {
-    caja(x0 + i * (mitad + 20), yy, mitad, 106, 18, "rgba(255,255,255,.07)");
+    caja(x0 + i * (mitad + 20), yy, mitad, 106, 18, PANEL);
     txt(v, x0 + i * (mitad + 20) + 26, yy + 56, 46, 800); txt(t, x0 + i * (mitad + 20) + 26, yy + 88, 22, 600, TENUE);
   });
 }
@@ -269,7 +276,7 @@ function provincia(F) {
   // Barra de escaños de la provincia
   const lista = conEscano(a).filter((p) => p.e > 0), paso = w / a.escanos_total;
   let i = 0;
-  if (!lista.length) caja(x0, y, w, 46, 10, "rgba(255,255,255,.1)");
+  if (!lista.length) caja(x0, y, w, 46, 10, PISTA);
   lista.forEach((p) => { for (let j = 0; j < p.e; j++, i++) caja(x0 + i * paso + 2, y, paso - 4, 46, 8, col(p.f)); });
   y += 72;
   let yFin = yPie;
@@ -281,7 +288,7 @@ function provincia(F) {
     const lineas = c.measureText(t).width > w - 56 ? 2 : 1, alto = 38 + 40 * lineas;
     yFin = yPie - alto - 14;
     caja(x0, yFin + 10, w, alto, 16, ACENTO);
-    parrafo(t, x0 + 28, yFin + 10 + 48, w - 56, 30, 600, "#04150d", 40);
+    parrafo(t, x0 + 28, yFin + 10 + 48, w - 56, 30, 600, BLANCO, 40);
   }
   filas(F, a, y, yFin, E2023_PROV[E.prov] || {});
 }
@@ -299,15 +306,15 @@ function mapa(F) {
   if (M) {
     const hueco = yFaldon - y - 64, k = Math.min(w / M.ancho, hueco / M.alto), dx = x0 + (w - M.ancho * k) / 2, dy = y + (hueco - M.alto * k) / 2;
     c.save(); c.translate(dx, dy); c.scale(k, k);
-    c.lineWidth = 1.2 / k; c.strokeStyle = "rgba(255,255,255,.35)"; c.strokeRect(...M.canarias);
+    c.lineWidth = 1.2 / k; c.strokeStyle = "rgba(13,19,32,.35)"; c.strokeRect(...M.canarias);
     c.strokeStyle = TINTA; c.lineWidth = 1.6 / k; c.lineJoin = "round";
     Object.entries(M.p).forEach(([cod, d]) => {
       if (M.puntos[cod]) return;
       const forma = new Path2D(d);
-      c.fillStyle = gana[cod] ? col(gana[cod].f) : "rgba(255,255,255,.14)"; c.fill(forma); c.stroke(forma);
+      c.fillStyle = gana[cod] ? col(gana[cod].f) : PISTA; c.fill(forma); c.stroke(forma);
     });
     Object.entries(M.puntos).forEach(([cod, [px, py]]) => {
-      c.beginPath(); c.arc(px, py, 6, 0, 2 * Math.PI); c.fillStyle = gana[cod] ? col(gana[cod].f) : "rgba(255,255,255,.14)"; c.fill(); c.stroke();
+      c.beginPath(); c.arc(px, py, 6, 0, 2 * Math.PI); c.fillStyle = gana[cod] ? col(gana[cod].f) : PISTA; c.fill(); c.stroke();
     });
     c.restore();
   }
@@ -329,9 +336,9 @@ function mapa(F) {
   const cw = (w - 2 * 14) / 3, ch = (altoFaldon - 14 - 12) / 2;
   lista.forEach((p, i) => {
     const cx = x0 + (i % 3) * (cw + 14), cy = yFaldon + Math.floor(i / 3) * (ch + 14), color = p.otros ? "#8D98A6" : col(p.f);
-    caja(cx, cy, cw, ch, 14, "rgba(255,255,255,.07)"); caja(cx, cy, 12, ch, 6, color);
-    txt(p.otros ? `Otros (${p.otros})` : nom(p), cx + 28, cy + 44, 30, 800, "#fff", "left", cw - 150);
-    txt(p.e, cx + cw - 18, cy + 56, 58, 800, "#fff", "right");
+    caja(cx, cy, cw, ch, 14, PANEL); caja(cx, cy, 12, ch, 6, color);
+    txt(p.otros ? `Otros (${p.otros})` : nom(p), cx + 28, cy + 44, 30, 800, TEXTO, "left", cw - 150);
+    txt(p.e, cx + cw - 18, cy + 56, 58, 800, TEXTO, "right");
     txt(num(p.v) + " votos", cx + 28, cy + 82, 22, 600, TENUE);
     txt(dec(100 * p.v / a.validos, 1) + " %", cx + 28, cy + 114, 26, 700);
     txt("escaños", cx + cw - 18, cy + 84, 18, 600, TENUE, "right");
@@ -350,25 +357,29 @@ function pactometro(F) {
   const pendientes = a.escanos_total - sI - sD - sM;
   const estado = (n) => pendientes > 0 ? "de momento" : n >= MAYORIA ? `Mayoría absoluta (+${n - MAYORIA})` : `A ${MAYORIA - n} de la mayoría absoluta`;
   // Totales de cada bloque
-  txt(sI, x0, y + 96, 120, 800); txt(sD, x1, y + 96, 120, 800, "#fff", "right");
-  txt(estado(sI), x0, y + 140, 28, 700, sI >= MAYORIA ? SUBE : TENUE); txt(estado(sD), x1, y + 140, 28, 700, sD >= MAYORIA ? SUBE : TENUE, "right");
-  y += 176;
+  const mitad = (w - 24) / 2;
+  [[izq, sI, x0], [der, sD, x0 + mitad + 24]].forEach(([l, n, bx]) => {
+    caja(bx, y - 4, mitad, 150, 22, l.length ? col(l[0].f) + "24" : PANEL);
+    txt(n, bx + mitad / 2, y + 86, 100, 800, TEXTO, "center");
+    txt(estado(n), bx + mitad / 2, y + 128, 27, 700, n >= MAYORIA ? SUBE : TENUE, "center");
+  });
+  y += 190;
   // Barra de 350
   const alto = 120, px = w / a.escanos_total;
-  caja(x0, y, w, alto, 14, "rgba(255,255,255,.08)");
+  caja(x0, y, w, alto, 14, PANEL);
   c.save(); c.beginPath(); c.roundRect(x0, y, w, alto, 14); c.clip();
   const tramo = (x, p, alfa) => {
     c.globalAlpha = alfa; c.fillStyle = p.f === "OTROS" ? "#8D98A6" : col(p.f); c.fillRect(x, y, p.e * px, alto); c.globalAlpha = 1;
     c.strokeStyle = TINTA; c.lineWidth = 3; c.strokeRect(x, y - 2, p.e * px, alto + 4);
-    if (p.e >= 12) txt(p.e, x + p.e * px / 2, y + alto / 2 + 14, 40, 800, "#fff", "center");
+    if (p.e >= 12) txt(p.e, x + p.e * px / 2, y + alto / 2 + 14, 40, 800, BLANCO, "center");
   };
   let x = x0; izq.forEach((p) => { tramo(x, p, 1); x += p.e * px; });
   const xm = x; let xr = x1; der.forEach((p) => { xr -= p.e * px; tramo(xr, p, 1); });
   let xq = xm + (xr - xm - sM * px) / 2; medio.forEach((p) => { tramo(xq, p, .5); xq += p.e * px; });
   c.restore();
   const xc = x0 + w / 2;
-  c.setLineDash([10, 7]); c.strokeStyle = "#fff"; c.lineWidth = 4; c.beginPath(); c.moveTo(xc, y - 22); c.lineTo(xc, y + alto + 22); c.stroke(); c.setLineDash([]);
-  txt(`Mayoría absoluta: ${MAYORIA}`, xc, y + alto + 54, 24, 700, "#fff", "center");
+  c.setLineDash([10, 7]); c.strokeStyle = TEXTO; c.lineWidth = 4; c.beginPath(); c.moveTo(xc, y - 22); c.lineTo(xc, y + alto + 22); c.stroke(); c.setLineDash([]);
+  txt(`Mayoría absoluta: ${MAYORIA}`, xc, y + alto + 54, 24, 700, TEXTO, "center");
   const libres = a.escanos_total - sI - sD - sM;
   if (libres > 0) txt(`${libres} escaños aún sin asignar`, x1, y + alto + 54, 22, 600, TENUE, "right");
   y += alto + 84;
@@ -398,7 +409,7 @@ function pactometro(F) {
     if (!g.fichas.length) txt("Ninguno", x0, gy + tam * 1.5 + tam * 1.35, tam * .9, 600, TENUE);
     g.fichas.forEach(([p, cx, fila, an]) => {
       const fy = gy + tam * 1.5 + fila * tam * 2.1, h = tam * 1.75;
-      caja(cx, fy, an - 12, h, h / 2, "rgba(255,255,255,.09)"); caja(cx + tam * .5, fy + h / 2 - tam * .4, tam * .8, tam * .8, 6, p.f === "OTROS" ? "#8D98A6" : col(p.f));
+      caja(cx, fy, an - 12, h, h / 2, PANEL); caja(cx + tam * .5, fy + h / 2 - tam * .4, tam * .8, tam * .8, 6, p.f === "OTROS" ? "#8D98A6" : col(p.f));
       txt(etiqueta(p), cx + tam * 1.65, fy + h / 2 + tam * .35, tam * .93, 700);
     });
   });
@@ -413,7 +424,7 @@ function pactometro(F) {
   };
   let yy = yPie - 196;
   (pendientes > 0 ? [`Quedan ${pendientes} escaños por asignar, en provincias que aún no tienen recuento. Las sumas de cada bloque no son definitivas.`]
-                  : [falta(izq, sI), falta(der, sD)]).forEach((t) => { yy += parrafo(t, x0, yy, w, 25, 600, "#fff", 32) + 6; });
+                  : [falta(izq, sI), falta(der, sD)]).forEach((t) => { yy += parrafo(t, x0, yy, w, 25, 600, TEXTO, 32) + 6; });
   txt("Suma aritmética de escaños; no refleja pactos anunciados.", x1, yPie - 6 - 34, 20, 600, TENUE, "right");
 }
 

@@ -262,11 +262,15 @@ python -m pytest            # 68 tests; se saltan si no hay Parquet bruto (ni fi
 ## Gráficos de OBS: lienzo transparente y verde de Onda Cero (2026-11-27, pedido por el equipo)
 - **Rama `claude/keen-gates-t1fste`, sin fusionar**: Netlify publica otra rama; hasta que se lleve allí, `elecciones2030.netlify.app` no cambia.
 - **Lienzo transparente siempre** (`web/directo/index.html`): `html`, `body` y las secciones no pintan nada; cada módulo lleva su fondo (título, hora, hemiciclo, cajas, filas de la tabla, avances, pie del faldón). Comprobado con Playwright (`omitBackground`): alfa 0 fuera de los módulos, 255 dentro. **Cambia el significado de `fondo=`**: `blanco` = módulos claros sobre lienzo transparente (antes pintaba la pantalla de blanco); sin `fondo`, módulos oscuros; `fondo=oscuro` o `fondo=solido&tema=claro` devuelven el lienzo opaco; `croma` sigue. **Sin probar en OBS** (solo en Chromium).
-- **Color:** `--acento` = `#01743e` (verde de Onda Cero) con texto blanco encima (cabecera del faldón y del ticker, último escaño). Como texto sobre panel oscuro no se lee, así que el tema oscuro usa `--acento-texto: #3fbf85` (aclarado **elegido por mí**, no corporativo). **`redes.html` sigue con `#19c37d`** (no se pidió; su lienzo es oscuro).
+- **Color:** `--acento` = `#01743e` (verde de Onda Cero) con texto blanco encima (cabecera del faldón y del ticker, último escaño). Como texto sobre panel oscuro no se lee, así que el tema oscuro usa `--acento-texto: #3fbf85` (aclarado **elegido por mí**, no corporativo).
 - Quitado el título «Elecciones generales 29N» del hemiciclo y el «29N» de participación.
 - **Provincias:** la galería tiene una sola tarjeta «Provincia» con desplegable (cambia miniatura y dirección); la vista `provincia` tiene además un desplegable que solo aparece con el ratón encima (en OBS, con «Interactuar») y cambia de provincia sin recargar.
 - `herramientas/capturas_directo.js` fotografía ahora los gráficos sobre un degradado que hace de señal de vídeo.
 - El equipo mencionó una captura de referencia («Quedaría así») que **no llegó** a la conversación: el resultado no está contrastado con ella.
+
+## Piezas para redes con fondo claro y logos (2026-11-27, pedido por el equipo)
+- `web/directo/redes.html`: fondo blanco, texto oscuro y verde `#01743e` en todas las piezas y formatos (los tamaños no cambian). Cabecera con el logo «29N elecciones generales» a la izquierda y el de Onda Cero a la derecha (`web/directo/logos/redes_29n.png`, `redes_ondacero.png`), pintados a su tamaño; si falta el fichero sale un rótulo de texto. **Los logos son recortes provisionales de la imagen de referencia que pasó el equipo (webp, algo blandos): pedir los originales.**
+- Pactómetro: los totales de cada bloque van en dos cajas teñidas, como en la referencia. **No se ha copiado el reparto de la referencia** (ponía a Junts, PNV y BNG en la columna del PP): siguen los bloques acordados y el grupo «fuera de los dos bloques», pendientes de Redacción.
 
 ## Calendario del 29N
 - **28 de octubre de 2026**: candidaturas presentadas (BOE-A-2026-22607); **3 de noviembre**: proclamadas; 7 de noviembre: corrección. Recogido (ver sección anterior). Campaña: 13–27 de noviembre. Constitución de las Cámaras: 23 de diciembre.
