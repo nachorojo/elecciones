@@ -158,11 +158,11 @@ function fondo(F) {
 function cabecera(F, titulo, dato, rotulo) {
   const [x0, , x1] = F.z, y0 = F.z[1] + (F.tapa.length ? 22 : 0), yl = y0 - 22, alto = 118;   // franja de logos (dentro de la zona útil)
   const L = LOGOS["29n"], O = LOGOS.ondacero;
-  if (L) c.drawImage(L, x0 + 24, yl + (alto - L.height) / 2);
+  if (L) c.drawImage(L, x0, yl + (alto - L.height) / 2);
   else { const an = txt("29N", x0, yl + 84, 64, 800, TEXTO); txt("elecciones", x0 + an + 12, yl + 58, 26, 700, TEXTO); txt("generales", x0 + an + 12, yl + 84, 26, 700, TEXTO); }
   if (O) c.drawImage(O, x1 - 44 - O.width, yl + (alto - O.height) / 2);
   else txt("ONDA CERO", x1, yl + 76, 34, 800, ACENTO, "right");
-  if (D.simulacro) { const xs = (x0 + x1) / 2 - 89; caja(xs, yl + 41, 178, 36, 6, "#ffb020"); txt("SIMULACRO", xs + 89, yl + 67, 22, 800, "#1a1300", "center"); }
+  if (D.simulacro) { const xs = (x0 + (L ? L.width : 300) + x1 - 44 - (O ? O.width : 200)) / 2 - 89; caja(xs, yl + 41, 178, 36, 6, "#ffb020"); txt("SIMULACRO", xs + 89, yl + 67, 22, 800, "#1a1300", "center"); }
   txt(titulo, x0, y0 + 164, 58, 800, TEXTO, "left", x1 - x0 - (dato ? 330 : 0));
   if (dato) { txt(dato, x1, y0 + 164, 76, 800, ACENTO, "right"); txt(rotulo, x1, y0 + 198, 24, 600, TENUE, "right"); }
   return y0 + 220;
