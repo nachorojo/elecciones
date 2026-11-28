@@ -1,4 +1,3 @@
-/* Módulos para incrustar (iframe) en páginas públicas. Fondo blanco, sin menú ni enlaces al resto de la web. */
 :root { --texto: #14181f; --tenue: #5b6470; --raya: #e3e6ea; --panel: #f4f6f8; --verde: #01743e; --sube: #0a7d43; --baja: #c62828; }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: #fff; color: var(--texto);

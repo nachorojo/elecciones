@@ -5,33 +5,35 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>29N · Módulos para incrustar</title>
-<!-- Uso interno: vista previa y código de los módulos de embed/ para incrustarlos en páginas de ondacero.es. -->
 <link rel="stylesheet" href="estilo.css">
 <style>
-  .modulo { margin-bottom: 22px; min-width: 0; }
-  .modulo h2 { margin: 0 0 4px; } .modulo p { margin: 0 0 10px; font-size: 14px; color: var(--texto-tenue); }
+  .modulo { margin-bottom: 26px; min-width: 0; }
+  .modulo h2 { margin: 0 0 4px; } .modulo > p { margin: 0 0 10px; font-size: 14px; color: var(--texto-tenue); }
   .marco { border: 1px dashed var(--borde); border-radius: 10px; padding: 10px; background: #fff; max-width: 760px; }
   .marco iframe { width: 100%; border: 0; display: block; }
   textarea { width: 100%; font: 12.5px ui-monospace, Consolas, monospace; padding: 10px; border-radius: 8px; border: 1px solid var(--borde);
              background: var(--superficie-alta); color: var(--texto); resize: vertical; }
   .fila-b { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0 14px; }
-  .fila-b button, .fila-b select { font: inherit; font-size: 13.5px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--borde); background: var(--superficie); color: var(--texto); cursor: pointer; }
-  h3 { margin: 14px 0 6px; font-size: 15px; }
+  .fila-b button, .fila-b select { font: inherit; font-size: 13.5px; padding: 8px 13px; border-radius: 8px; border: 1px solid var(--borde); background: var(--superficie); color: var(--texto); cursor: pointer; }
+  .fila-b button.prueba { border-color: #c98a00; color: #7a4f0e; background: #fff6e0; }
+  h3 { margin: 18px 0 6px; font-size: 15px; }
+  .campo { font-size: 13px; color: var(--texto-tenue); margin: 0 0 4px; }
+  code.nombre { font-size: 13.5px; background: var(--superficie-alta); padding: 3px 8px; border-radius: 6px; }
+  details { margin-top: 6px; } summary { cursor: pointer; font-weight: 600; font-size: 14px; }
 </style>
 </head>
 <body>
 <header class="cabecera">
   <div class="marca"><div class="logo" aria-hidden="true"></div>
-    <div><h1>Módulos para incrustar · 29N</h1><p>Para páginas públicas de ondacero.es · se actualizan solos con cada envío de Interior</p></div></div>
+    <div><h1>Módulos para incrustar · 29N</h1><p>Código para el CMS y textos de los artículos · se actualizan solos con cada envío de Interior</p></div></div>
   <span class="insignia">Uso interno</span>
 </header>
 <main>
-  <section class="aviso"><strong>Cómo se usan.</strong> Cada módulo es una página sin menú ni enlaces al resto de esta web, pensada para ir
-    dentro de un <code>&lt;iframe&gt;</code>. Se adapta al ancho de la columna y al móvil. <strong>El código siempre apunta al recuento
-    real</strong>: el desplegable de abajo solo cambia la vista previa de esta página. El código «sin script» fija una altura para
-    escritorio y otra para móvil; si el contenido crece (más candidaturas, o al desplegar la lista de provincias) aparece una barra
-    de desplazamiento dentro del módulo. El código «con script» estira el iframe hasta el alto exacto del contenido. Vuelven a pedir los datos cada dos minutos (<code>?refresco=120</code>, mínimo 30 segundos).
-    Los textos de las páginas (título, entradilla y explicación) están en <code>TEXTOS_ONDACERO_29N.md</code>, en la repo.</section>
+  <section class="aviso"><strong>Cómo se usan.</strong> En el CMS: <em>Contenidos › Html › Crear</em>. El código «web» va en el campo
+    <strong>Html</strong> y el «AMP» en el campo <strong>Html AMP</strong> (hace falta si el módulo va dentro de un artículo, porque
+    los artículos tienen versión AMP en móvil). Después se inserta en la noticia con el botón «Módulo HTML».
+    <strong>El código normal apunta siempre al recuento real.</strong> Los botones ámbar copian el mismo código con datos de prueba,
+    para ver cómo queda en un borrador: ese no se publica. El desplegable de abajo solo cambia la vista previa de esta página.</section>
   <div class="fila-b"><label>Vista previa con
     <select id="datos"><option value="prueba">datos de prueba</option><option value="real">el recuento real</option></select></label></div>
   <div id="modulos"></div>
@@ -40,21 +42,69 @@
 <script>
 const BASE = new URL("embed/", location.href).href, ORIGEN = location.origin;
 const MODULOS = [
-  { id: "proyeccion", titulo: "Proyección de escaños", texto: "Reparto final estimado a partir del recuento parcial, comparado con lo contado hasta el momento y con su margen de error.",
-    prueba: "?datos=ejemplo", alto: 1400, altoMovil: 1650 },
-  { id: "disputados", titulo: "Escaños en el aire", texto: "Las provincias donde el último escaño está más ajustado: quién lo tiene, quién va detrás y cuántos votos le faltan. Opciones: ?n=12 (filas) y ?minimo=50 (% escrutado de la provincia para entrar).",
-    prueba: "?datos=simulacro", alto: 1200, altoMovil: 1750 },
+  { id: "proyeccion", nombre: "OC29N_proyeccion_escanos", titulo: "Proyección de escaños",
+    texto: "Reparto final estimado a partir del recuento parcial, comparado con lo contado hasta el momento y con su margen de error.",
+    prueba: "?datos=ejemplo", alto: 1400, altoMovil: 1650,
+    titulares: ["PROYECCIÓN | Hacia dónde apunta el recuento: el reparto de escaños que dibujan los votos ya contados",
+                "PROYECCIÓN | Quién ganará las elecciones según el recuento actual"],
+    entradilla: "Onda Cero calcula, con cada actualización del escrutinio, cómo quedaría el Congreso si el voto que falta por contar se comporta como el ya contado en cada municipio.",
+    cuerpo: [
+      ["p", "A medida que avanza el escrutinio, Onda Cero calcula cómo quedaría el Congreso si el voto que falta por contar se comporta como el que ya se ha contado en cada municipio. El gráfico compara los escaños que cada candidatura tiene con el recuento actual (la marca vertical) con los que tendría al final (la barra). Se actualiza con cada envío de datos del Ministerio del Interior."],
+      ["modulo"],
+      ["h3", "Cómo se calcula"],
+      ["p", "El recuento oficial no avanza igual en toda España: llegan antes unas mesas que otras, y los primeros datos rara vez se parecen al resultado final. Esta proyección corrige ese efecto municipio a municipio. En cada localidad compara los votos ya contados con lo que ese mismo municipio votó en las generales de julio de 2023, mide cuánto ha subido o bajado cada candidatura y aplica ese cambio a los votos que aún faltan por contar allí."],
+      ["p", "Donde todavía hay pocos datos, se apoya en lo que está ocurriendo en los municipios de tamaño parecido de su provincia y, si hace falta, en el conjunto de la provincia. Con esos votos estimados se reparten los escaños de cada circunscripción con la misma fórmula que usa la ley electoral."],
+      ["h3", "Qué tiene en cuenta y qué no"],
+      ["p", "Al trabajar pueblo a pueblo y ciudad a ciudad, la proyección sabe de dónde llegan los votos: no confunde un recuento avanzado en el medio rural con uno avanzado en las grandes capitales, ni una provincia con otra. Lo que no puede saber es qué mesas de un mismo municipio se han contado primero, porque ese dato no se publica durante la noche, y el orden de llegada de los votos dentro de cada localidad influye en el resultado."],
+      ["p", "Tampoco hay referencia de 2023 para las candidaturas que se presentan por primera vez o que antes concurrían juntas: en esos casos se proyecta el porcentaje que llevan en lo ya contado, con menos precisión."],
+      ["h3", "Cuánto puede fallar"],
+      ["p", "El margen de error que acompaña al gráfico procede de un ensayo: se han reconstruido las noches electorales de abril de 2019, noviembre de 2019 y julio de 2023 haciendo llegar los votos en distintos órdenes, y se ha medido a cuántos escaños del resultado final se quedaba la proyección en cada momento. Con la mitad del voto contado, la desviación media fue de entre uno y dos escaños sobre 350, y de cuatro en el caso más desfavorable. Con menos recuento, o si los votos llegan en un orden poco habitual, puede ser mayor."],
+      ["p", "La proyección no incluye el voto de los residentes en el extranjero, que se cuenta días después, y no es un dato oficial: el único resultado oficial es el que publica el Ministerio del Interior."],
+    ] },
+  { id: "disputados", nombre: "OC29N_escanos_en_el_aire", titulo: "Escaños en el aire",
+    texto: "Las provincias donde el último escaño está más ajustado: quién lo tiene, quién va detrás y cuántos votos le faltan. Por defecto, 12 filas (?n=10 para diez) y solo provincias con al menos el 50 % escrutado (?minimo=50).",
+    prueba: "?datos=simulacro", alto: 1200, altoMovil: 1750,
+    titulares: ["Los escaños en el aire: ¿dónde se está jugando el resultado final?"],
+    entradilla: "Las provincias donde el último escaño se decide por menos votos, con el recuento en marcha: quién lo tiene, quién se lo disputa y cuánto le falta.",
+    cuerpo: [
+      ["p", "El reparto del Congreso se decide a menudo por un puñado de votos en unas pocas provincias. Esta lista recoge, con el recuento en marcha, las circunscripciones donde el último escaño está más ajustado: qué candidatura lo tiene ahora, cuál se lo disputa y cuántos votos le faltan para arrebatárselo."],
+      ["modulo"],
+      ["h3", "Cómo se calcula"],
+      ["p", "En cada provincia los escaños se asignan con la fórmula D'Hondt: los votos de cada candidatura se dividen entre uno, dos, tres… y los escaños van a los cocientes más altos. El último escaño es el que entra con el cociente más bajo, y la candidatura que se queda a las puertas es la que tiene el siguiente."],
+      ["p", "El Ministerio del Interior publica con cada actualización, para cada provincia, quién ocupa ese último escaño, quién va detrás y cuántos votos más necesitaría para quedárselo. Aquí se ordenan las provincias de menos a más votos de diferencia."],
+      ["h3", "Cómo leerlo"],
+      ["p", "La cifra corresponde a lo contado en ese momento, no al final del recuento: una provincia con el 60 % escrutado puede cambiar de manos varias veces. Por eso solo entran en la lista las que han superado la mitad del escrutinio, y cada una indica su porcentaje. Cuando el recuento termina, la lista muestra los escaños que se han decidido por menos votos."],
+      ["p", "No incluye el voto de los residentes en el extranjero, que se suma días después y que en provincias muy ajustadas puede cambiar el último escaño."],
+    ] },
 ];
 const el = (t, c, x) => { const n = document.createElement(t); if (c) n.className = c; if (x !== undefined) n.textContent = x; return n; };
-function codigo(m, tipo) {
-  const src = `${BASE}${m.id}.html`, titulo = m.titulo + " · elecciones generales del 29N";
-  if (tipo === "fijo") return `<style>.oc29n-${m.id}{width:100%;border:0;display:block;height:${m.alto}px}@media (max-width:620px){.oc29n-${m.id}{height:${m.altoMovil}px}}</style>\n` +
-    `<iframe class="oc29n-${m.id}" src="${src}" title="${titulo}" loading="lazy"></iframe>`;
-  if (tipo === "amp") return `<amp-iframe width="750" height="${m.altoMovil}" heights="(min-width: 620px) ${m.alto}px, ${m.altoMovil}px" layout="responsive" frameborder="0" resizable\n` +
-    `  sandbox="allow-scripts allow-same-origin" src="${src}#amp=1">\n  <div overflow tabindex="0" role="button" aria-label="Ver más">Ver más</div>\n</amp-iframe>`;
-  return `<iframe id="oc29n-${m.id}" src="${src}" title="${titulo}" style="width:100%;border:0;display:block" height="${m.alto}" scrolling="no"></iframe>\n` +
+const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+function codigoWeb(m, prueba) {
+  const c = "oc29n-" + m.id, src = `${BASE}${m.id}.html${prueba ? m.prueba : ""}`;
+  return `<style>.${c}.${c}{display:block;width:100%;max-width:100%;margin:24px 0;border:0;height:${m.alto}px}@media (max-width:620px){.${c}.${c}{height:${m.altoMovil}px}}</style>\n` +
+    `<iframe class="${c}" src="${src}" title="${m.titulo} · elecciones generales del 29N" loading="lazy"></iframe>`;
+}
+function codigoAmp(m, prueba) {
+  const src = `${BASE}${m.id}.html${prueba ? m.prueba : ""}#amp=1`;
+  return `<amp-iframe width="750" height="${m.altoMovil}" heights="(min-width: 620px) ${m.alto}px, ${m.altoMovil}px" layout="responsive" frameborder="0" resizable sandbox="allow-scripts allow-same-origin" src="${src}">\n` +
+    `<amp-img placeholder layout="fill" src="https://statics.atresmedia.com/elecciones/loading_icon.gif"></amp-img>\n` +
+    `<div overflow tabindex="0" role="button" aria-label="Ver más" style="padding:8px;text-align:center;background:#027a35;color:#ffffff;font-weight:700">Ver más</div>\n</amp-iframe>`;
+}
+function codigoScript(m) {
+  return `<iframe id="oc29n-${m.id}" src="${BASE}${m.id}.html" title="${m.titulo} · elecciones generales del 29N" style="width:100%;border:0;display:block" height="${m.alto}" scrolling="no"></iframe>\n` +
     `<script>addEventListener("message",function(e){if(e.origin==="${ORIGEN}"&&e.data&&e.data.origen==="ondacero-29n"){var f=document.getElementById("oc29n-"+e.data.modulo);if(f)f.style.height=e.data.alto+"px"}});<\/script>`;
 }
+const cuerpoHtml = (m) => m.cuerpo.map(([t, x]) => t === "modulo" ? `<p>[GRÁFICO: ${m.nombre}]</p>` : t === "h3" ? `<h3 class="article-title-1">${esc(x)}</h3>` : `<p>${esc(x)}</p>`).join("\n");
+const cuerpoPlano = (m) => m.cuerpo.map(([t, x]) => t === "modulo" ? `[GRÁFICO: ${m.nombre}]` : t === "h3" ? x.toUpperCase() : x).join("\n\n");
+function copiar(boton, texto) {
+  const fin = () => { const t = boton.textContent; boton.textContent = "Copiado"; setTimeout(() => { boton.textContent = t; }, 1500); };
+  (navigator.clipboard && isSecureContext ? navigator.clipboard.writeText(texto) : Promise.reject()).then(fin).catch(() => {
+    const a = el("textarea"); a.value = texto; document.body.appendChild(a); a.select();
+    try { document.execCommand("copy"); fin(); } catch (e) { boton.textContent = "Copia a mano desde el cuadro"; }
+    a.remove();
+  });
+}
+function boton(texto, valor, clase) { const b = el("button", clase, texto); b.type = "button"; b.addEventListener("click", () => copiar(b, valor())); return b; }
 function pintar() {
   const prueba = document.querySelector("#datos").value === "prueba", cont = document.querySelector("#modulos");
   cont.replaceChildren();
@@ -64,14 +114,31 @@ function pintar() {
     const marco = el("div", "marco"), f = el("iframe");
     f.id = "oc29n-" + m.id; f.src = `${BASE}${m.id}.html${prueba ? m.prueba : ""}`; f.height = m.alto; f.title = m.titulo; f.setAttribute("scrolling", "no");
     marco.appendChild(f); s.appendChild(marco);
-    [["Código sin script (altura fija para escritorio y para móvil)", "fijo"], ["Código con script (ajusta la altura al contenido)", "script"],
-     ["Versión AMP (solo si la página tiene versión AMP; sin probar en una página AMP real)", "amp"]].forEach(([rot, tipo]) => {
-      s.appendChild(el("h3", null, rot));
-      const t = el("textarea"); t.readOnly = true; t.rows = 4; t.value = codigo(m, tipo); s.appendChild(t);
-      const fila = el("div", "fila-b"), b = el("button", null, "Copiar código"); b.type = "button";
-      b.addEventListener("click", () => { t.select(); (navigator.clipboard ? navigator.clipboard.writeText(t.value) : Promise.reject()).catch(() => document.execCommand("copy")); b.textContent = "Copiado"; setTimeout(() => { b.textContent = "Copiar código"; }, 1500); });
-      fila.appendChild(b); s.appendChild(fila);
+
+    s.appendChild(el("h3", null, "1. El módulo para el CMS"));
+    const pn = el("p", "campo"); pn.append("Nombre propuesto del módulo: ", el("code", "nombre", m.nombre)); s.appendChild(pn);
+    const f1 = el("div", "fila-b");
+    f1.append(boton("Copiar código web (campo Html)", () => codigoWeb(m)), boton("Copiar código AMP (campo Html AMP)", () => codigoAmp(m)));
+    s.appendChild(f1);
+    const f2 = el("div", "fila-b");
+    f2.append(boton("Copiar código web DE PRUEBA", () => codigoWeb(m, true), "prueba"), boton("Copiar código AMP DE PRUEBA", () => codigoAmp(m, true), "prueba"));
+    s.appendChild(f2);
+    const det = el("details"); det.appendChild(el("summary", null, "Ver los códigos"));
+    [["Web (campo Html): sin script, altura fija para escritorio y para móvil", codigoWeb(m)], ["AMP (campo Html AMP)", codigoAmp(m)],
+     ["Alternativa web con script (ajusta la altura al contenido; no usar si se prefiere evitar scripts)", codigoScript(m)]].forEach(([rot, c]) => {
+      det.appendChild(el("p", "campo", rot)); const t = el("textarea"); t.readOnly = true; t.rows = 4; t.value = c; det.appendChild(t);
     });
+    s.appendChild(det);
+
+    s.appendChild(el("h3", null, "2. El texto del artículo"));
+    m.titulares.forEach((t, i) => { const fila = el("div", "fila-b"); fila.append(boton(m.titulares.length > 1 ? `Copiar titular ${i + 1}` : "Copiar titular", () => t), el("span", null, t)); s.appendChild(fila); });
+    const fe = el("div", "fila-b"); fe.append(boton("Copiar entradilla", () => m.entradilla), el("span", null, m.entradilla)); s.appendChild(fe);
+    const fc = el("div", "fila-b");
+    fc.append(boton("Copiar cuerpo (HTML para el CMS)", () => cuerpoHtml(m)), boton("Copiar cuerpo (texto plano)", () => cuerpoPlano(m)));
+    s.appendChild(fc);
+    s.appendChild(el("p", "campo", `El cuerpo lleva la marca [GRÁFICO: ${m.nombre}] donde va el módulo: se sustituye por el módulo con el botón «Módulo HTML» del editor.`));
+    const det2 = el("details"); det2.appendChild(el("summary", null, "Ver el cuerpo"));
+    const t2 = el("textarea"); t2.readOnly = true; t2.rows = 12; t2.value = cuerpoHtml(m); det2.appendChild(t2); s.appendChild(det2);
     cont.appendChild(s);
   });
 }

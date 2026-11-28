@@ -5,9 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Proyección de escaños · 29N</title>
-<!-- Módulo para incrustar en una página pública: proyección del reparto final de escaños a partir del recuento parcial.
-     Lee ../data/proyeccion_29n.json (lo publica la captura con cada envío). ?datos=ejemplo carga una noche ficticia rotulada.
-     ?refresco=120 (segundos). Textos pensados para el público: sin jerga interna. -->
 <link rel="stylesheet" href="comun.css">
 <style>
   .filas { display: grid; gap: 6px; }
@@ -48,7 +45,7 @@
 <script>
 const ORIGEN = Q.get("datos") === "ejemplo" ? "../data/proyeccion_ejemplo.json" : "../data/proyeccion_29n.json";
 const MAYORIA = 176;
-const ART = ["PP", "PSOE", "PNV", "BNG", "FA"];      // llevan artículo: «al PP», «del Frente Amplio»
+const ART = ["PP", "PSOE", "PNV", "BNG", "FA"];
 let firma = "";
 
 function fiabilidad(d, asignados) {

@@ -1,4 +1,3 @@
-/* Común a los módulos incrustables: nombres y colores de partido, formato y aviso de altura a la página que incrusta. */
 const NOMBRE = { PP: "PP", PSOE: "PSOE", VOX: "Vox", FA: "Frente Amplio", PODEMOS: "Podemos", SALF: "Se Acabó la Fiesta", ERC: "ERC",
   JUNTS: "Junts", EH_BILDU: "EH Bildu", PNV: "PNV", BNG: "BNG", CC: "Coalición Canaria", COMPROMIS: "Compromís",
   NC: "NC-Podemos-IU-Sumar", ADELANTE: "Adelante Andalucía", TERUEL_EXISTE: "Teruel Existe", GBAI: "Geroa Bai", PACMA: "PACMA", OTROS: "Otras" };
@@ -11,15 +10,11 @@ const el = (t, c, x) => { const n = document.createElement(t); if (c) n.classNam
 const dec = (x, d = 1) => Number(x).toLocaleString("es-ES", { minimumFractionDigits: d, maximumFractionDigits: d });
 const num = (x) => Math.round(x).toLocaleString("es-ES", { useGrouping: "always" });
 const punto = (f) => { const i = el("i", "p"); i.style.background = COLOR[f] || "#8D98A6"; return i; };
-// Cada cuánto se vuelven a pedir los datos (segundos). Los envíos de Interior llegan cada ~3 minutos.
 const REFRESCO = 1000 * Math.max(30, Number(Q.get("refresco")) || 120);
-// La página que incrusta puede ajustar el alto del iframe escuchando este mensaje (ver embeds.html).
 function avisarAltura() {
   if (parent === window) return;
   parent.postMessage({ origen: "ondacero-29n", modulo: document.body.dataset.modulo, alto: document.documentElement.scrollHeight }, "*");
-  // Dentro de un <amp-iframe resizable> (la dirección lleva #amp=1), AMP espera este otro mensaje para cambiar el alto.
   if (location.hash.includes("amp=1")) parent.postMessage({ sentinel: "amp", type: "embed-size", height: document.documentElement.scrollHeight }, "*");
 }
 addEventListener("load", avisarAltura); addEventListener("resize", avisarAltura);
-// Pide un JSON aprovechando la caché del navegador (revalida con el servidor; si no ha cambiado no se vuelve a bajar).
 async function pedir(url) { const r = await fetch(url, { cache: "no-cache" }); if (!r.ok) throw new Error(r.status); return r.json(); }
