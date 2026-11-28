@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>29N · Temas para artículos</title>
+<!-- Uso interno (Redacción). Pinta web/data/curiosidades_29n.json, que genera `python -m pipeline.curiosidades_29n`
+     con los resultados municipales del último envío. ?datos=ejemplo: dos provincias del simulacro, para ver el formato. -->
+<link rel="stylesheet" href="estilo.css">
+<style>
+  .indice { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 18px; }
+  .indice a { font-size: 13px; padding: 5px 10px; border-radius: 999px; background: var(--superficie-alta); color: var(--texto); text-decoration: none; }
+  .tema { margin-bottom: 18px; min-width: 0; }
+  .tema h2 { margin: 0 0 4px; font-size: 19px; }
+  .tema .regla { margin: 0 0 10px; font-size: 13.5px; color: var(--texto-tenue); }
+  .tema .nota { margin: 10px 0 0; font-size: 13px; color: var(--texto-tenue); }
+  .desliza { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 14.5px; }
+  th, td { padding: 7px 9px; text-align: right; border-bottom: 1px solid var(--borde); white-space: nowrap; }
+  th { font-size: 12.5px; color: var(--texto-tenue); font-weight: 600; }
+  th:first-child, td:first-child, td.txt, th.txt { text-align: left; white-space: normal; }
+  .acciones { display: flex; gap: 8px; margin-top: 10px; }
+  .acciones button { font: inherit; font-size: 13px; padding: 5px 11px; border-radius: 8px; border: 1px solid var(--borde); background: var(--superficie); color: var(--texto); cursor: pointer; }
+  #buscar { font: inherit; padding: 8px 11px; border-radius: 9px; border: 1px solid var(--borde); background: var(--superficie); color: var(--texto); width: min(100%, 340px); margin-bottom: 14px; }
+</style>
+</head>
+<body>
+<header class="cabecera">
+  <div class="marca"><div class="logo" aria-hidden="true"></div>
+    <div><h1>Temas para artículos · 29N</h1><p>Rankings y curiosidades con los resultados municipales · uso interno de Redacción</p></div></div>
+  <span class="insignia" id="estado">Cargando…</span>
+</header>
+<main>
+  <p id="prueba" class="aviso" hidden><strong>DATOS DE PRUEBA.</strong> Solo Bizkaia y Melilla, del simulacro de Interior: sirve para ver el formato, no son resultados.</p>
+  <p id="simulacro" class="aviso" hidden><strong>SIMULACRO.</strong> Datos ficticios del ensayo técnico de Interior.</p>
+  <p id="parcial" class="aviso" hidden><strong>RECUENTO SIN TERMINAR.</strong> Se han admitido municipios que no están al 100 %: los datos pueden cambiar.</p>
+  <section class="aviso"><strong>Antes de publicar.</strong> Son datos provisionales del Ministerio del Interior, sin voto exterior.
+    Cada tabla lleva su regla: casi todas exigen un mínimo de electores (el censo electoral, no los habitantes), porque en un pueblo de
+    veinte votantes cualquier porcentaje es extremo. Las comparaciones son con julio de 2023. Los temas de «baja uno y sube otro» son
+    movimientos que coinciden en el mismo municipio: los datos no dicen de qué partido vienen los votos.</section>
+  <input id="buscar" type="search" placeholder="Filtrar temas (Vox, participación, distrito…)" aria-label="Filtrar temas">
+  <nav class="indice" id="indice" aria-label="Temas"></nav>
+  <div id="temas"></div>
+</main>
+<script src="menu.js"></script>
+<script>
+const $ = (s) => document.querySelector(s);
+const el = (t, c, x) => { const n = document.createElement(t); if (c) n.className = c; if (x !== undefined) n.textContent = x; return n; };
+const ORIGEN = new URLSearchParams(location.search).get("datos") === "ejemplo" ? "data/curiosidades_ejemplo.json" : "data/curiosidades_29n.json";
+const fmt = (v) => v === null || v === undefined ? "—" : typeof v === "number" ? v.toLocaleString("es-ES", { useGrouping: "always", maximumFractionDigits: 2 }) : String(v);
+const sin = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+function texto(t) { return [t.titular, t.regla, t.columnas.join("\t"), ...t.filas.map((f) => f.map(fmt).join("\t")), t.nota || ""].join("\n"); }
+function csv(t) { return [t.columnas, ...t.filas].map((f) => f.map((v) => `"${String(v === null ? "" : typeof v === "number" ? String(v).replace(".", ",") : v).replace(/"/g, '""')}"`).join(";")).join("\r\n"); }
+function pintar(d) {
+  $("#prueba").hidden = !d.prueba; $("#simulacro").hidden = !d.simulacro || d.prueba; $("#parcial").hidden = !d.parcial;
+  const cont = $("#temas"), ind = $("#indice");
+  cont.replaceChildren(); ind.replaceChildren();
+  if (!d.temas.length) {
+    $("#estado").textContent = "Sin datos todavía";
+    cont.appendChild(el("p", "nota", "Los temas se generan al acabar el recuento, con «python -m pipeline.curiosidades_29n --publicar» en el PC que captura. Con ?datos=ejemplo se ve el formato."));
+    return;
+  }
+  $("#estado").textContent = `${d.temas.length} temas · ${d.municipios_completos.toLocaleString("es-ES")} municipios completos` + (d.generado ? ` · ${d.generado}` : "");
+  d.temas.forEach((t) => {
+    const a = el("a", null, t.titular); a.href = "#" + t.id; a.dataset.q = sin(t.titular + " " + t.regla); ind.appendChild(a);
+    const s = el("section", "tarjeta tema"); s.id = t.id; s.dataset.q = a.dataset.q;
+    s.append(el("h2", null, t.titular), el("p", "regla", t.regla));
+    const tabla = el("table"), cab = el("tr");
+    const esTexto = t.columnas.map((_, i) => t.filas.some((f) => typeof f[i] === "string"));
+    t.columnas.forEach((c, i) => cab.appendChild(el("th", esTexto[i] ? "txt" : null, c)));
+    tabla.appendChild(el("thead")).appendChild(cab);
+    const tb = tabla.appendChild(el("tbody"));
+    t.filas.forEach((f) => { const tr = el("tr"); f.forEach((v, i) => tr.appendChild(el("td", esTexto[i] ? "txt" : null, fmt(v)))); tb.appendChild(tr); });
+    const des = el("div", "desliza"); des.appendChild(tabla); s.appendChild(des);
+    if (t.nota) s.appendChild(el("p", "nota", t.nota));
+    const acc = el("div", "acciones");
+    const b1 = el("button", null, "Copiar tabla"); b1.type = "button";
+    b1.addEventListener("click", () => { navigator.clipboard.writeText(texto(t)).then(() => { b1.textContent = "Copiada"; setTimeout(() => { b1.textContent = "Copiar tabla"; }, 1500); }); });
+    const b2 = el("button", null, "Descargar CSV"); b2.type = "button";
+    b2.addEventListener("click", () => { const x = el("a"); x.href = URL.createObjectURL(new Blob(["﻿" + csv(t)], { type: "text/csv" })); x.download = `29n_${t.id}.csv`; x.click(); URL.revokeObjectURL(x.href); });
+    acc.append(b1, b2); s.appendChild(acc);
+    cont.appendChild(s);
+  });
+}
+$("#buscar").addEventListener("input", (e) => { const q = sin(e.target.value.trim()); document.querySelectorAll("[data-q]").forEach((n) => { n.hidden = q && !n.dataset.q.includes(q); }); });
+fetch(ORIGEN, { cache: "no-store" }).then((r) => r.json()).then(pintar).catch(() => { $("#estado").textContent = "Sin datos"; });
+</script>
+</body>
+</html>

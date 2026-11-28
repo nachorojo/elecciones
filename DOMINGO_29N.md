@@ -187,7 +187,15 @@ Cuando el porcentaje escrutado lleve un rato parado cerca del 100 % (pasada la m
    ```
    Baja los resultados mesa a mesa. Tarda varios minutos y no escribe nada hasta el final. Si dice que los ficheros aún
    no existen, no insistas: se repite el lunes.
-3. No borres nada. Deja el PC encendido o apágalo normalmente; avisa a Nacho de que has terminado y de cualquier cosa rara
+3. Todavía en esa ventana, genera los temas para artículos (tarda menos de un minuto):
+   ```powershell
+   python -m pipeline.curiosidades_29n --publicar
+   ```
+   Debe decir algo como `45 temas con 8.100 de 8.132 municipios completos` y `publicado`. Se ven en
+   `https://elecciones2030.netlify.app/curiosidades.html`. Si Redacción los quiere antes de que acabe el recuento, se puede
+   lanzar en **otra** ventana (paso 1, sin las variables) con `python -m pipeline.curiosidades_29n --parcial`, **sin**
+   `--publicar`, y mirar el fichero en local: publicar a la vez que la captura puede hacer chocar las dos subidas.
+4. No borres nada. Deja el PC encendido o apágalo normalmente; avisa a Nacho de que has terminado y de cualquier cosa rara
    que hayas visto (con la hora).
 
 ---

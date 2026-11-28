@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>29N · Módulos para incrustar</title>
+<!-- Uso interno: vista previa y código de los módulos de embed/ para incrustarlos en páginas de ondacero.es. -->
+<link rel="stylesheet" href="estilo.css">
+<style>
+  .modulo { margin-bottom: 22px; min-width: 0; }
+  .modulo h2 { margin: 0 0 4px; } .modulo p { margin: 0 0 10px; font-size: 14px; color: var(--texto-tenue); }
+  .marco { border: 1px dashed var(--borde); border-radius: 10px; padding: 10px; background: #fff; max-width: 760px; }
+  .marco iframe { width: 100%; border: 0; display: block; }
+  textarea { width: 100%; font: 12.5px ui-monospace, Consolas, monospace; padding: 10px; border-radius: 8px; border: 1px solid var(--borde);
+             background: var(--superficie-alta); color: var(--texto); resize: vertical; }
+  .fila-b { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0 14px; }
+  .fila-b button, .fila-b select { font: inherit; font-size: 13.5px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--borde); background: var(--superficie); color: var(--texto); cursor: pointer; }
+  h3 { margin: 14px 0 6px; font-size: 15px; }
+</style>
+</head>
+<body>
+<header class="cabecera">
+  <div class="marca"><div class="logo" aria-hidden="true"></div>
+    <div><h1>Módulos para incrustar · 29N</h1><p>Para páginas públicas de ondacero.es · se actualizan solos con cada envío de Interior</p></div></div>
+  <span class="insignia">Uso interno</span>
+</header>
+<main>
+  <section class="aviso"><strong>Cómo se usan.</strong> Cada módulo es una página sin menú ni enlaces al resto de esta web, pensada para ir
+    dentro de un <code>&lt;iframe&gt;</code>. Se adapta al ancho de la columna y al móvil. El código «con ajuste de altura» incluye un
+    pequeño script que estira el iframe hasta el alto real del contenido; si el gestor de contenidos no admite scripts, usa el código
+    «altura fija». Vuelven a pedir los datos cada dos minutos (<code>?refresco=120</code>, mínimo 30 segundos).
+    Los textos de las páginas (título, entradilla y explicación) están en <code>TEXTOS_ONDACERO_29N.md</code>, en la repo.</section>
+  <div class="fila-b"><label>Vista previa con
+    <select id="datos"><option value="prueba">datos de prueba</option><option value="real">el recuento real</option></select></label></div>
+  <div id="modulos"></div>
+</main>
+<script src="menu.js"></script>
+<script>
+const BASE = new URL("embed/", location.href).href, ORIGEN = location.origin;
+const MODULOS = [
+  { id: "proyeccion", titulo: "Proyección de escaños", texto: "Reparto final estimado a partir del recuento parcial, comparado con lo contado hasta el momento y con su margen de error.",
+    prueba: "?datos=ejemplo", alto: 1250, altoMovil: 1400 },
+  { id: "disputados", titulo: "Escaños en el aire", texto: "Las provincias donde el último escaño está más ajustado: quién lo tiene, quién va detrás y cuántos votos le faltan. Opciones: ?n=12 (filas) y ?minimo=50 (% escrutado de la provincia para entrar).",
+    prueba: "?datos=simulacro", alto: 1150, altoMovil: 1700 },
+];
+const el = (t, c, x) => { const n = document.createElement(t); if (c) n.className = c; if (x !== undefined) n.textContent = x; return n; };
+function codigo(m, conScript) {
+  const src = `${BASE}${m.id}.html`, titulo = m.titulo + " · elecciones generales del 29N";
+  if (!conScript) return `<iframe src="${src}" title="${titulo}" style="width:100%;border:0;display:block" height="${m.altoMovil}" loading="lazy"></iframe>`;
+  return `<iframe id="oc29n-${m.id}" src="${src}" title="${titulo}" style="width:100%;border:0;display:block" height="${m.alto}" scrolling="no"></iframe>\n` +
+    `<script>addEventListener("message",function(e){if(e.origin==="${ORIGEN}"&&e.data&&e.data.origen==="ondacero-29n"){var f=document.getElementById("oc29n-"+e.data.modulo);if(f)f.style.height=e.data.alto+"px"}});<\/script>`;
+}
+function pintar() {
+  const prueba = document.querySelector("#datos").value === "prueba", cont = document.querySelector("#modulos");
+  cont.replaceChildren();
+  MODULOS.forEach((m) => {
+    const s = el("section", "tarjeta modulo");
+    s.append(el("h2", null, m.titulo), el("p", null, m.texto));
+    const marco = el("div", "marco"), f = el("iframe");
+    f.id = "oc29n-" + m.id; f.src = `${BASE}${m.id}.html${prueba ? m.prueba : ""}`; f.height = m.alto; f.title = m.titulo; f.setAttribute("scrolling", "no");
+    marco.appendChild(f); s.appendChild(marco);
+    [["Código con ajuste de altura (recomendado)", true], ["Código de altura fija (si el gestor no admite scripts)", false]].forEach(([rot, conScript]) => {
+      s.appendChild(el("h3", null, rot));
+      const t = el("textarea"); t.readOnly = true; t.rows = conScript ? 4 : 2; t.value = codigo(m, conScript); s.appendChild(t);
+      const fila = el("div", "fila-b"), b = el("button", null, "Copiar código"); b.type = "button";
+      b.addEventListener("click", () => { t.select(); (navigator.clipboard ? navigator.clipboard.writeText(t.value) : Promise.reject()).catch(() => document.execCommand("copy")); b.textContent = "Copiado"; setTimeout(() => { b.textContent = "Copiar código"; }, 1500); });
+      fila.appendChild(b); s.appendChild(fila);
+    });
+    cont.appendChild(s);
+  });
+}
+addEventListener("message", (e) => { if (e.origin === ORIGEN && e.data && e.data.origen === "ondacero-29n") { const f = document.getElementById("oc29n-" + e.data.modulo); if (f) f.style.height = e.data.alto + "px"; } });
+document.querySelector("#datos").addEventListener("change", pintar);
+pintar();
+</script>
+</body>
+</html>

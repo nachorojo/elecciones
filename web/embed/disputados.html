@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Escaños en el aire · 29N</title>
+<!-- Módulo para incrustar en una página pública: las provincias donde el último escaño está más disputado.
+     Lee ../data/vivo_29n.json. Usa el dato de Interior: candidatura que tiene el último escaño de cada provincia, la que
+     va detrás y los votos que le faltan. Se ordena por votos que faltan (de menos a más) y solo entran las provincias que
+     llevan al menos `minimo` % escrutado, para que no ganen siempre las que tienen poco recuento.
+     ?n=12 (filas) · ?minimo=50 · ?datos=simulacro (último envío del simulacro, rotulado) · ?refresco=120 -->
+<link rel="stylesheet" href="comun.css">
+<style>
+  ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  li { display: grid; grid-template-columns: 34px minmax(120px, 210px) 1fr auto; gap: 4px 14px; align-items: center;
+       background: var(--panel); border-radius: 12px; padding: 11px 14px; }
+  li .pos { font-size: 20px; font-weight: 800; color: #9aa5b1; text-align: center; }
+  li .prov b { display: block; font-size: 17px; font-weight: 800; line-height: 1.15; }
+  li .prov span { font-size: 13px; color: var(--tenue); }
+  li .duelo { font-size: 15px; line-height: 1.35; }
+  li .duelo b { font-weight: 700; }
+  li .votos { text-align: right; white-space: nowrap; }
+  li .votos b { display: block; font-size: 22px; font-weight: 800; letter-spacing: -.02em; line-height: 1; color: var(--verde); }
+  li .votos span { font-size: 12.5px; color: var(--tenue); }
+  @media (max-width: 620px) {
+    li { grid-template-columns: 26px 1fr auto; padding: 10px 11px; }
+    li .pos { font-size: 17px; grid-row: 1 / span 2; align-self: start; padding-top: 2px; }
+    li .prov { grid-column: 2; grid-row: 1; } li .votos { grid-column: 3; grid-row: 1; }
+    li .duelo { grid-column: 2 / -1; grid-row: 2; font-size: 14px; } li .prov b { font-size: 16px; } li .votos b { font-size: 19px; }
+  }
+</style>
+</head>
+<body data-modulo="disputados">
+<div class="barra-estado" id="estado"></div>
+<div id="cuerpo"></div>
+<p class="nota" id="nota"></p>
+<p class="fuente">Fuente: Ministerio del Interior, recuento provisional. Los votos que faltan son los que necesitaría la candidatura
+  que va detrás para quedarse con el último escaño de la provincia, con lo contado hasta ese momento. No incluye el voto de los residentes en el extranjero.</p>
+<script src="comun.js"></script>
+<script>
+const ORIGEN = Q.get("datos") === "simulacro" ? "../data/simulacro_29n.json" : "../data/vivo_29n.json";
+const N = Math.max(1, Number(Q.get("n")) || 12), MINIMO = Q.has("minimo") ? Number(Q.get("minimo")) : 50;
+let firma = "";
+const de = (a, c) => a.partidos.find((x) => Number(x.c) === Number(c));
+const nombre = (p) => p ? (NOMBRE[p.f] && p.f !== "OTROS" ? NOMBRE[p.f] : p.s) : "otra candidatura";
+
+function pintar(D) {
+  const estado = $("#estado"), cuerpo = $("#cuerpo"), a = D.nacional;
+  estado.replaceChildren(); cuerpo.replaceChildren(); $("#nota").textContent = "";
+  if (D.simulacro) estado.appendChild(el("span", "chip sello", "SIMULACRO"));
+  if (!(a.escrutado > 0)) { cuerpo.appendChild(el("div", "vacio", "La lista se activará cuando el Ministerio del Interior empiece a publicar el recuento.")); return; }
+  const c1 = el("span", "chip"); c1.append(el("b", null, dec(a.escrutado, 1) + " %"), "escrutado" + (D.hora ? " · datos de las " + D.hora : ""));
+  estado.appendChild(c1);
+  const validas = Object.values(D.provincias).filter((p) => p.escrutado > 0 && p.ultimo && Number(p.ultimo.ultima) > 0 && Number(p.ultimo.proxima) > 0 && p.ultimo.faltan > 0);
+  const lista = validas.filter((p) => p.escrutado >= MINIMO).sort((x, y) => x.ultimo.faltan - y.ultimo.faltan || y.escrutado - x.escrutado).slice(0, N);
+  if (!lista.length) { cuerpo.appendChild(el("div", "vacio", `Todavía no hay provincias con al menos el ${MINIMO} % escrutado. La lista aparecerá en cuanto las haya.`)); return; }
+  const ol = el("ol");
+  lista.forEach((p, i) => {
+    const u = de(p, p.ultimo.ultima), s = de(p, p.ultimo.proxima), li = el("li");
+    const prov = el("div", "prov"); prov.append(el("b", null, p.nombre), el("span", null, `${dec(p.escrutado, 1)} % escrutado · ${p.escanos_total} ${p.escanos_total === 1 ? "escaño" : "escaños"}`));
+    const duelo = el("div", "duelo");
+    duelo.append("Último escaño para ", punto(u && u.f), el("b", null, nombre(u)), ". ", punto(s && s.f), el("b", null, nombre(s)), " se lo arrebataría con");
+    const votos = el("div", "votos"); votos.append(el("b", null, num(p.ultimo.faltan)), el("span", null, p.ultimo.faltan === 1 ? "voto más" : "votos más"));
+    li.append(el("div", "pos", String(i + 1)), prov, duelo, votos);
+    ol.appendChild(li);
+  });
+  cuerpo.appendChild(ol);
+  const fuera = validas.length - validas.filter((p) => p.escrutado >= MINIMO).length;
+  $("#nota").textContent = `Se muestran los ${lista.length} escaños más ajustados entre las provincias con al menos el ${MINIMO} % escrutado` +
+    (fuera > 0 ? ` (${fuera} provincias aún no llegan a ese nivel).` : ".") + " La lista se actualiza con cada nuevo envío de datos.";
+}
+async function cargar() {
+  try {
+    const d = await pedir(ORIGEN), f = JSON.stringify([d.hora, d.nacional.escrutado, d.nacional.votantes]);
+    if (f !== firma) { firma = f; pintar(d); avisarAltura(); }
+  } catch (e) { if (!firma) { $("#cuerpo").replaceChildren(el("div", "vacio", "Datos no disponibles en este momento.")); avisarAltura(); } }
+}
+cargar(); setInterval(cargar, REFRESCO);
+</script>
+</body>
+</html>

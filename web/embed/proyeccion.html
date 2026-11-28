@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Proyección de escaños · 29N</title>
+<!-- Módulo para incrustar en una página pública: proyección del reparto final de escaños a partir del recuento parcial.
+     Lee ../data/proyeccion_29n.json (lo publica la captura con cada envío). ?datos=ejemplo carga una noche ficticia rotulada.
+     ?refresco=120 (segundos). Textos pensados para el público: sin jerga interna. -->
+<link rel="stylesheet" href="comun.css">
+<style>
+  .filas { display: grid; gap: 6px; }
+  .fila { display: grid; grid-template-columns: minmax(96px, 190px) 1fr 62px 78px; gap: 10px; align-items: center;
+          padding: 7px 10px; border-radius: 10px; background: var(--panel); }
+  .fila.cab { background: none; padding: 0 10px; font-size: 12.5px; color: var(--tenue); font-weight: 600; }
+  .fila .n { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fila .b { position: relative; height: 18px; border-radius: 9px; background: #e4e8ec; }
+  .fila .b span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 9px; }
+  .fila .b em { position: absolute; top: -4px; bottom: -4px; width: 3px; margin-left: -1.5px; background: var(--texto); border-radius: 2px; }
+  .fila .e { text-align: right; font-size: 24px; font-weight: 800; letter-spacing: -.02em; line-height: 1; }
+  .fila .a { text-align: right; font-size: 13.5px; color: var(--tenue); line-height: 1.15; }
+  .fila .a b { display: block; font-size: 15px; color: var(--texto); }
+  .mas { color: var(--sube); } .menos { color: var(--baja); }
+  .leyenda { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--tenue); margin: 10px 2px 0; }
+  .leyenda span::before { content: ""; display: inline-block; vertical-align: -2px; margin-right: 6px; }
+  .leyenda .l1::before { width: 22px; height: 10px; border-radius: 5px; background: #9aa5b1; }
+  .leyenda .l2::before { width: 3px; height: 14px; background: var(--texto); border-radius: 2px; }
+  .margen { background: var(--panel); border-left: 4px solid var(--verde); border-radius: 8px; padding: 12px 14px; margin-top: 14px; font-size: 15px; }
+  details { margin-top: 12px; font-size: 14.5px; } summary { cursor: pointer; font-weight: 700; }
+  details ul { margin: 8px 0 0; padding-left: 20px; } details li { margin: 3px 0; }
+  @media (max-width: 480px) {
+    .fila { grid-template-columns: 112px 1fr 44px 38px; gap: 7px; padding: 7px 8px; }
+    .fila.cab { padding: 0 8px; font-size: 11.5px; } .fila .e { font-size: 21px; }
+    .fila .n { font-size: 13.5px; white-space: normal; line-height: 1.15; display: flex; align-items: center; }
+    .fila.cab .e { font-size: 11.5px !important; }
+    .fila .a { font-size: 12px; } .fila .a b { font-size: 13.5px; }
+  }
+</style>
+</head>
+<body data-modulo="proyeccion">
+<div class="barra-estado" id="estado"></div>
+<p class="titular" id="titular"></p>
+<div id="cuerpo"></div>
+<p class="fuente">Recuento: Ministerio del Interior (datos provisionales). Proyección: cálculo propio de Onda Cero a partir de ese recuento;
+  no es un dato oficial ni incluye el voto de los residentes en el extranjero.</p>
+<script src="comun.js"></script>
+<script>
+const ORIGEN = Q.get("datos") === "ejemplo" ? "../data/proyeccion_ejemplo.json" : "../data/proyeccion_29n.json";
+const MAYORIA = 176;
+const ART = ["PP", "PSOE", "PNV", "BNG", "FA"];      // llevan artículo: «al PP», «del Frente Amplio»
+let firma = "";
+
+function fiabilidad(d, asignados) {
+  if (asignados < 350) return ["aviso", "Muy provisional: faltan provincias por entrar en el recuento"];
+  if (d.escrutado < 30) return ["aviso", "Muy provisional"];
+  if (d.escrutado < 50) return ["aviso", "Provisional"];
+  if (d.escrutado < 80) return ["", "Orientativa"];
+  return ["", "Muy próxima al recuento"];
+}
+function pintar(d) {
+  const estado = $("#estado"), cuerpo = $("#cuerpo"), titular = $("#titular");
+  estado.replaceChildren(); cuerpo.replaceChildren(); titular.textContent = "";
+  if (d.prueba) estado.appendChild(el("span", "chip sello", "DATOS DE PRUEBA"));
+  if (d.simulacro) estado.appendChild(el("span", "chip sello", "SIMULACRO"));
+  if (!(d.escrutado > 0) || !d.nacional || !Object.keys(d.nacional.escanos || {}).length) {
+    cuerpo.appendChild(el("div", "vacio", "La proyección se activará cuando el Ministerio del Interior empiece a publicar el recuento."));
+    return;
+  }
+  const proy = d.nacional.escanos, rec = (d.recuento || {}).nacional || {};
+  const asignados = Object.values(rec).reduce((t, x) => t + x, 0);
+  const c1 = el("span", "chip"); c1.append(el("b", null, dec(d.escrutado, 1) + " %"), "escrutado" + (d.hora ? " · datos de las " + d.hora : ""));
+  const [clase, texto] = fiabilidad(d, asignados);
+  estado.append(c1, el("span", "chip " + clase, texto));
+
+  const claves = [...new Set([...Object.keys(proy), ...Object.keys(rec)])].filter((k) => (proy[k] || 0) + (rec[k] || 0) > 0)
+    .sort((a, b) => (proy[b] || 0) - (proy[a] || 0) || (rec[b] || 0) - (rec[a] || 0));
+  const [uno, dos] = claves;
+  if (uno) {
+    const empate = dos && proy[uno] === proy[dos];
+    titular.textContent = empate
+      ? `La proyección da un empate en cabeza: ${NOMBRE[uno] || uno} y ${NOMBRE[dos] || dos}, con ${proy[uno]} escaños cada uno.`
+      : `La proyección sitúa ${ART.includes(uno) ? "al" : "a"} ${NOMBRE[uno] || uno} como primera fuerza, con ${proy[uno]} escaños` + (dos ? `, por delante ${ART.includes(dos) ? "del" : "de"} ${NOMBRE[dos] || dos} (${proy[dos] || 0}).` : ".");
+  }
+  const max = Math.max(MAYORIA, ...claves.map((k) => Math.max(proy[k] || 0, rec[k] || 0)));
+  const filas = el("div", "filas");
+  const cab = el("div", "fila cab"); cab.append(el("div", null, "Candidatura"), el("div"), el("div", "e", ""), el("div", "a", "Ahora"));
+  cab.children[2].textContent = "Proyección"; cab.children[2].style.cssText = "font-size:12.5px;font-weight:600;letter-spacing:0;white-space:nowrap;direction:rtl";
+  filas.appendChild(cab);
+  claves.forEach((k) => {
+    const f = el("div", "fila"), p = proy[k] || 0, r = rec[k] || 0;
+    const n = el("div", "n"); n.append(punto(k), NOMBRE[k] || k);
+    const b = el("div", "b"), s = el("span"), m = el("em");
+    s.style.width = 100 * p / max + "%"; s.style.background = COLOR[k] || "#8D98A6"; m.style.left = 100 * r / max + "%";
+    b.append(s, m);
+    const a = el("div", "a"); a.appendChild(el("b", null, String(r)));
+    const dif = p - r; a.appendChild(el("span", dif > 0 ? "mas" : dif < 0 ? "menos" : null, dif > 0 ? `+${dif}` : dif < 0 ? `−${-dif}` : "="));
+    f.append(n, b, el("div", "e", String(p)), a);
+    filas.appendChild(f);
+  });
+  cuerpo.appendChild(filas);
+  const ley = el("div", "leyenda");
+  ley.append(el("span", "l1", "Escaños proyectados al final del recuento"), el("span", "l2", "Escaños con lo contado hasta ahora"), el("span", null, `Mayoría absoluta: ${MAYORIA}`));
+  cuerpo.appendChild(ley);
+  if (d.margen) {
+    const m = el("div", "margen");
+    m.append(el("b", null, "Margen de error orientativo. "), `En los ensayos con elecciones anteriores, con un ${dec(d.escrutado, 0)} % escrutado la proyección ` +
+      `se desvió de media ${dec(d.margen.escanos_media, 1)} escaños del reparto final (sobre 350), y hasta ${d.margen.escanos_max} en el caso más desfavorable. ` +
+      "El orden en que llegan los votos y la presencia de candidaturas nuevas pueden ampliar esa desviación.");
+    cuerpo.appendChild(m);
+  }
+  const rp = (d.recuento || {}).provincias || {}, lista = [];
+  Object.entries(d.provincias || {}).forEach(([cod, a]) => {
+    const r = rp[cod] || {}, cambios = [];
+    new Set([...Object.keys(a.escanos || {}), ...Object.keys(r)]).forEach((k) => { const x = ((a.escanos || {})[k] || 0) - (r[k] || 0); if (x) cambios.push(`${NOMBRE[k] || k} ${x > 0 ? "+" + x : "−" + (-x)}`); });
+    if (cambios.length) lista.push(`${(d.nombres || {})[cod] || cod}: ${cambios.join(", ")}`);
+  });
+  if (lista.length) {
+    const det = el("details"); det.appendChild(el("summary", null, `Provincias donde la proyección cambia el reparto actual (${lista.length})`));
+    const ul = el("ul"); lista.sort((a, b) => a.localeCompare(b, "es")).forEach((t) => ul.appendChild(el("li", null, t)));
+    det.appendChild(ul); det.addEventListener("toggle", avisarAltura); cuerpo.appendChild(det);
+  }
+}
+async function cargar() {
+  try {
+    const d = await pedir(ORIGEN), f = JSON.stringify(d);
+    if (f !== firma) { firma = f; pintar(d); avisarAltura(); }
+  } catch (e) { if (!firma) { $("#cuerpo").replaceChildren(el("div", "vacio", "Datos no disponibles en este momento.")); avisarAltura(); } }
+}
+cargar(); setInterval(cargar, REFRESCO);
+</script>
+</body>
+</html>

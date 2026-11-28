@@ -9,6 +9,8 @@
     ["Gráficos de directo (OBS)", "directo/galeria.html"],
     ["Piezas para redes", "directo/redes.html"],
     ["Pantallas exteriores", "pantallas.html"],
+    ["Módulos para incrustar", "embeds.html"],
+    ["Temas para artículos", "curiosidades.html"],
   ];
   const aqui = location.pathname.replace(/\/$/, "/index.html");
   const sim = new URLSearchParams(location.search).has("simulador");
