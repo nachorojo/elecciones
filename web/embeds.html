@@ -27,9 +27,10 @@
 </header>
 <main>
   <section class="aviso"><strong>Cómo se usan.</strong> Cada módulo es una página sin menú ni enlaces al resto de esta web, pensada para ir
-    dentro de un <code>&lt;iframe&gt;</code>. Se adapta al ancho de la columna y al móvil. El código «con ajuste de altura» incluye un
-    pequeño script que estira el iframe hasta el alto real del contenido; si el gestor de contenidos no admite scripts, usa el código
-    «altura fija». Vuelven a pedir los datos cada dos minutos (<code>?refresco=120</code>, mínimo 30 segundos).
+    dentro de un <code>&lt;iframe&gt;</code>. Se adapta al ancho de la columna y al móvil. <strong>El código siempre apunta al recuento
+    real</strong>: el desplegable de abajo solo cambia la vista previa de esta página. El código «sin script» fija una altura para
+    escritorio y otra para móvil; si el contenido crece (más candidaturas, o al desplegar la lista de provincias) aparece una barra
+    de desplazamiento dentro del módulo. El código «con script» estira el iframe hasta el alto exacto del contenido. Vuelven a pedir los datos cada dos minutos (<code>?refresco=120</code>, mínimo 30 segundos).
     Los textos de las páginas (título, entradilla y explicación) están en <code>TEXTOS_ONDACERO_29N.md</code>, en la repo.</section>
   <div class="fila-b"><label>Vista previa con
     <select id="datos"><option value="prueba">datos de prueba</option><option value="real">el recuento real</option></select></label></div>
@@ -40,14 +41,17 @@
 const BASE = new URL("embed/", location.href).href, ORIGEN = location.origin;
 const MODULOS = [
   { id: "proyeccion", titulo: "Proyección de escaños", texto: "Reparto final estimado a partir del recuento parcial, comparado con lo contado hasta el momento y con su margen de error.",
-    prueba: "?datos=ejemplo", alto: 1250, altoMovil: 1400 },
+    prueba: "?datos=ejemplo", alto: 1400, altoMovil: 1650 },
   { id: "disputados", titulo: "Escaños en el aire", texto: "Las provincias donde el último escaño está más ajustado: quién lo tiene, quién va detrás y cuántos votos le faltan. Opciones: ?n=12 (filas) y ?minimo=50 (% escrutado de la provincia para entrar).",
-    prueba: "?datos=simulacro", alto: 1150, altoMovil: 1700 },
+    prueba: "?datos=simulacro", alto: 1200, altoMovil: 1750 },
 ];
 const el = (t, c, x) => { const n = document.createElement(t); if (c) n.className = c; if (x !== undefined) n.textContent = x; return n; };
-function codigo(m, conScript) {
+function codigo(m, tipo) {
   const src = `${BASE}${m.id}.html`, titulo = m.titulo + " · elecciones generales del 29N";
-  if (!conScript) return `<iframe src="${src}" title="${titulo}" style="width:100%;border:0;display:block" height="${m.altoMovil}" loading="lazy"></iframe>`;
+  if (tipo === "fijo") return `<style>.oc29n-${m.id}{width:100%;border:0;display:block;height:${m.alto}px}@media (max-width:620px){.oc29n-${m.id}{height:${m.altoMovil}px}}</style>\n` +
+    `<iframe class="oc29n-${m.id}" src="${src}" title="${titulo}" loading="lazy"></iframe>`;
+  if (tipo === "amp") return `<amp-iframe width="750" height="${m.altoMovil}" heights="(min-width: 620px) ${m.alto}px, ${m.altoMovil}px" layout="responsive" frameborder="0" resizable\n` +
+    `  sandbox="allow-scripts allow-same-origin" src="${src}#amp=1">\n  <div overflow tabindex="0" role="button" aria-label="Ver más">Ver más</div>\n</amp-iframe>`;
   return `<iframe id="oc29n-${m.id}" src="${src}" title="${titulo}" style="width:100%;border:0;display:block" height="${m.alto}" scrolling="no"></iframe>\n` +
     `<script>addEventListener("message",function(e){if(e.origin==="${ORIGEN}"&&e.data&&e.data.origen==="ondacero-29n"){var f=document.getElementById("oc29n-"+e.data.modulo);if(f)f.style.height=e.data.alto+"px"}});<\/script>`;
 }
@@ -60,9 +64,10 @@ function pintar() {
     const marco = el("div", "marco"), f = el("iframe");
     f.id = "oc29n-" + m.id; f.src = `${BASE}${m.id}.html${prueba ? m.prueba : ""}`; f.height = m.alto; f.title = m.titulo; f.setAttribute("scrolling", "no");
     marco.appendChild(f); s.appendChild(marco);
-    [["Código con ajuste de altura (recomendado)", true], ["Código de altura fija (si el gestor no admite scripts)", false]].forEach(([rot, conScript]) => {
+    [["Código sin script (altura fija para escritorio y para móvil)", "fijo"], ["Código con script (ajusta la altura al contenido)", "script"],
+     ["Versión AMP (solo si la página tiene versión AMP; sin probar en una página AMP real)", "amp"]].forEach(([rot, tipo]) => {
       s.appendChild(el("h3", null, rot));
-      const t = el("textarea"); t.readOnly = true; t.rows = conScript ? 4 : 2; t.value = codigo(m, conScript); s.appendChild(t);
+      const t = el("textarea"); t.readOnly = true; t.rows = 4; t.value = codigo(m, tipo); s.appendChild(t);
       const fila = el("div", "fila-b"), b = el("button", null, "Copiar código"); b.type = "button";
       b.addEventListener("click", () => { t.select(); (navigator.clipboard ? navigator.clipboard.writeText(t.value) : Promise.reject()).catch(() => document.execCommand("copy")); b.textContent = "Copiado"; setTimeout(() => { b.textContent = "Copiar código"; }, 1500); });
       fila.appendChild(b); s.appendChild(fila);

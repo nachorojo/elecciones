@@ -42,10 +42,6 @@ está en `https://elecciones2030.netlify.app/embeds.html` (botón «Copiar códi
 > llegan en un orden poco habitual, puede ser mayor. La proyección no incluye el voto de los residentes en el extranjero, que
 > se cuenta días después, y no es un dato oficial: el único resultado oficial es el que publica el Ministerio del Interior.
 
-**Crédito sugerido (al pie):** Datos: Ministerio del Interior. Proyección: Onda Cero, a partir de la base histórica de resultados
-electorales elaborada por Miguel Ibáñez González (Universidad Autónoma de Madrid).
-*(Nacho: la proyección de la noche es un cálculo propio que usa su tabla municipal como referencia de 2023; decide tú la fórmula del crédito.)*
-
 ### Cuándo publicar la página
 
 - **Recomendación: a partir del 50 % escrutado y con las 52 provincias ya con datos.** El propio módulo avisa mientras falten

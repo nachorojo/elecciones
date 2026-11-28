@@ -17,6 +17,8 @@ const REFRESCO = 1000 * Math.max(30, Number(Q.get("refresco")) || 120);
 function avisarAltura() {
   if (parent === window) return;
   parent.postMessage({ origen: "ondacero-29n", modulo: document.body.dataset.modulo, alto: document.documentElement.scrollHeight }, "*");
+  // Dentro de un <amp-iframe resizable> (la dirección lleva #amp=1), AMP espera este otro mensaje para cambiar el alto.
+  if (location.hash.includes("amp=1")) parent.postMessage({ sentinel: "amp", type: "embed-size", height: document.documentElement.scrollHeight }, "*");
 }
 addEventListener("load", avisarAltura); addEventListener("resize", avisarAltura);
 // Pide un JSON aprovechando la caché del navegador (revalida con el servidor; si no ha cambiado no se vuelve a bajar).
